@@ -4,6 +4,7 @@ import json
 
 from sqlalchemy import func
 
+import errors
 from db.models import Map as MapModel, Line as LineModel, Point as PointModel, Post as PostModel
 from db.session import map_session_ctx
 from entity.line import Line
@@ -15,8 +16,9 @@ from entity.train import Train
 class Map(object):
     """ Map of game space.
     """
-    def __init__(self, name=None):
+    def __init__(self, name=None, use_active=False):
         self.name = name
+        self.use_active = use_active
         self.idx = None
         self.size = (None, None)
         self.line = {}
@@ -31,12 +33,21 @@ class Map(object):
         self.storages = []
         self.towns = []
 
-        if self.name is not None:
+        if self.name is not None or self.use_active:
             self.init_map()
 
     def init_map(self):
         with map_session_ctx() as session:
-            _map = session.query(MapModel).filter(MapModel.name == self.name).first()
+            if self.name:
+                _map = session.query(MapModel).filter(MapModel.name == self.name).first()
+            elif self.use_active:
+                _map = session.query(MapModel).filter(MapModel.active == True).first()
+            else:
+                raise errors.WgForgeServerError("Unable to initialize the map.")
+
+            if _map is None:
+                raise errors.WgForgeServerError("The map is not found.")
+
             self.idx = _map.id
             self.size = (_map.size_x, _map.size_y)
 

@@ -11,8 +11,8 @@ from server.db.map import generate_map04, DbMap
 from server.db.session import map_session_ctx
 from server.defs import Action, Result
 from server.entity.event import Event, EventType
-from server.game_config import CONFIG
-from test.server_connection import ServerConnection
+from server.config import CONFIG
+from tests.server_connection import ServerConnection
 
 
 class Test(unittest.TestCase):

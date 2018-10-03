@@ -4,23 +4,23 @@ import json
 import time
 import unittest
 
-from server.db.map import DbMap, generate_map03
+from server.db.map import DbMap
 from server.db.replay import DbReplay, generate_replay01
-from server.db.session import map_session_ctx, replay_session_ctx
+from server.db.session import replay_session_ctx
 from server.defs import Action, Result
-from server.game_config import CONFIG
-from test.server_connection import ServerConnection
+from server.config import CONFIG
+from tests.server_connection import ServerConnection
 
 
 def dict_items(sequence):
-            for item in sequence:
-                yield item['idx'], item
+    for item in sequence:
+        yield item['idx'], item
 
 
 class TestObserver(unittest.TestCase):
     """ Test class.
     """
-
+    MAP_NAME = 'map03'
     PLAYER_NAME = '-=TEST OBSERVER=-'
 
     @classmethod
@@ -42,10 +42,7 @@ class TestObserver(unittest.TestCase):
         with replay_session_ctx() as session:
             generate_replay01(replay_db, session)
 
-        map_db = DbMap()
-        map_db.reset_db()
-        with map_session_ctx() as session:
-            generate_map03(map_db, session)
+        DbMap().generate_maps(map_names=[TestObserver.MAP_NAME, ], active_map=TestObserver.MAP_NAME)
 
     @staticmethod
     def reset_db():
@@ -54,8 +51,7 @@ class TestObserver(unittest.TestCase):
         replay_db = DbReplay()
         replay_db.reset_db()
 
-        map_db = DbMap()
-        map_db.reset_db()
+        DbMap().reset_db()
 
     def do_action(self, action, data):
         return self.connection.send_action(action, data)
@@ -171,3 +167,4 @@ class TestObserver(unittest.TestCase):
         # Get last my game.
         game = my_games[-1]
         self.assertGreater(game['length'], 0)
+        conn.close()

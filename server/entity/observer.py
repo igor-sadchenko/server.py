@@ -13,8 +13,6 @@ class Observer(object):
     """ Observer entity.
     """
 
-    PLAYER_NAME = '-=Observer=-'
-
     def __init__(self):
         self._db = DbReplay()
         self._game = None
@@ -34,11 +32,11 @@ class Observer(object):
     def reset_game(self):
         """ Resets the game to initial state.
         """
-        self._game = Game(self._game_name, self._map_name, num_players=self.num_players, observed=True)
+        self._game = Game(self._game_name, num_players=self.num_players, observed=True)
         for action in self._actions:
             if action['code'] == Action.LOGIN:
                 data = json.loads(action['message'])
-                self._game.add_player(Player.create(data['name']))
+                self._game.add_player(Player(data['name']))
         self._current_turn = 0
         self._current_action = 0
 

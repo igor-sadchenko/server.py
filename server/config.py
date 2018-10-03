@@ -1,6 +1,6 @@
 """ Game configurations.
 """
-from os import getenv
+from os import getenv, path
 
 from attrdict import AttrDict
 
@@ -10,11 +10,25 @@ from entity.event import EventType
 class BaseConfig(object):
     """ Base configuration.
     """
+    SRC_DIR = path.dirname(path.realpath(__file__))
+    SERVER_ADDR = getenv('WG_FORGE_SERVER_ADDR', '127.0.0.1')
+    SERVER_PORT = int(getenv('WG_FORGE_SERVER_PORT', 2000))
+    MAP_DB_URI = getenv('MAP_DB_URI', 'sqlite:///' + path.join(SRC_DIR, 'map.db'))
+    REPLAY_DB_URI = getenv('REPLAY_DB_URI', 'sqlite:///' + path.join(SRC_DIR, 'replay.db'))
+    DB_URI = {
+        'map': MAP_DB_URI,
+        'replay': REPLAY_DB_URI,
+    }
+    RECEIVE_CHUNK_SIZE = 1024
+
     TICK_TIME = 10
     MAX_TICK_CALCULATION_TIME = 3
     TURN_TIMEOUT = TICK_TIME + MAX_TICK_CALCULATION_TIME
-    MAP_NAME = 'WG-Forge-Game-Map'
-    CURRENT_MAP_VERSION = 'map04'
+
+    MAP_NAME = 'map04'
+    MAPS_FORMAT = 'yaml'
+    MAPS_DISCOVERY = path.join(SRC_DIR, 'maps/*.yaml')
+
     TRAINS_COUNT = 8
     FUEL_ENABLED = False
     TRAIN_ALWAYS_DEVASTATED = True
@@ -87,8 +101,6 @@ class BaseConfig(object):
 class TestingConfig(BaseConfig):
     """ Test configuration.
     """
-    SERVER_ADDR = '127.0.0.1'
-    SERVER_PORT = 2000
     HIJACKERS_ASSAULT_PROBABILITY = 0
     PARASITES_ASSAULT_PROBABILITY = 0
     REFUGEES_ARRIVAL_PROBABILITY = 0

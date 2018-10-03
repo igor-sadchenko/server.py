@@ -2,29 +2,25 @@ import json
 import unittest
 from datetime import datetime
 
-from server.db.map import generate_map02, DbMap
-from server.db.session import map_session_ctx
+from server.db.map import DbMap
 from server.defs import Action, Result
 from server.entity.event import Event, EventType
-from test.server_connection import ServerConnection
+from tests.server_connection import ServerConnection
 
 
 class TestTrainCollisions(unittest.TestCase):
     """ Test class for a Game Player.
     """
+    MAP_NAME = 'map02'
     PLAYER_NAME = 'Test Player Name ' + datetime.now().strftime('%H:%M:%S.%f')
 
     @classmethod
     def setUpClass(cls):
-        database = DbMap()
-        database.reset_db()
-        with map_session_ctx() as session:
-            generate_map02(database, session)
+        DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        database = DbMap()
-        database.reset_db()
+        DbMap().reset_db()
 
     def do_action(self, action, data):
         return self.connection.send_action(action, data)

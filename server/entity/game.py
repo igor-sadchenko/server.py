@@ -15,7 +15,7 @@ from entity.player import Player
 from entity.point import Point
 from entity.post import PostType, Post
 from entity.train import Train
-from game_config import CONFIG
+from config import CONFIG
 from logger import log
 
 
@@ -42,12 +42,12 @@ class Game(Thread):
     # All registered games.
     GAMES = {}
 
-    def __init__(self, name, map_name=CONFIG.MAP_NAME, observed=False, num_players=1):
+    def __init__(self, name, observed=False, num_players=1):
         super(Game, self).__init__(name=name)
         log(log.INFO, "Create game, name: '{}'".format(self.name))
         self.state = GameState.INIT
         self.observed = observed
-        self.map = Map(map_name)
+        self.map = Map(use_active=True)
         self.num_players = num_players
         if self.num_players > len(self.map.towns):
             raise errors.BadCommand(
@@ -62,7 +62,7 @@ class Game(Thread):
         self.name = name
         self.trains = {}
         self.next_train_moves = {}
-        self.event_cooldowns = CONFIG.EVENT_COOLDOWNS_ON_START
+        self.event_cooldowns = CONFIG.EVENT_COOLDOWNS_ON_START.copy()
         self._lock = Lock()
         self._stop_event = Event()
         self._start_tick_event = Event()
@@ -122,6 +122,13 @@ class Game(Thread):
             if not self.observed and self.num_players == len(self.players):
                 Thread.start(self)
                 self.state = GameState.RUN
+
+    def remove_player(self, player: Player):
+        """ Removes player from the game.
+        """
+        player.in_game = False
+        if not any([p.in_game for p in self.players.values()]):
+            self.stop()
 
     def turn(self, player: Player):
         """ Makes next turn.

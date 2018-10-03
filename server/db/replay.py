@@ -1,15 +1,13 @@
 """ Replay DB helpers.
 """
-import sys
 from datetime import datetime
 
-from invoke import task
 from sqlalchemy import func, and_
 
+from config import CONFIG
 from db.models import ReplayBase, Game, Action
 from db.session import ReplaySession, replay_session_ctx
 from defs import Action as ActionCodes
-from game_config import CONFIG
 
 TIME_FORMAT = '%b %d %Y %I:%M:%S.%f'
 
@@ -96,12 +94,6 @@ class DbReplay(object):
         return actions
 
 
-def generate_replay00(database: DbReplay, session: ReplaySession):
-    """ Generates empty replay DB.
-    """
-    pass
-
-
 def generate_replay01(database: DbReplay, session: ReplaySession):
     """ Generates test game replay.
     """
@@ -145,25 +137,5 @@ def generate_replay01(database: DbReplay, session: ReplaySession):
 
 
 REPLAY_GENERATORS = {
-    'replay00': generate_replay00,
     'replay01': generate_replay01,
 }
-
-
-@task
-def generate_replay(_, replay_name=None):
-    """ Generates 'replay.db'.
-    """
-    if replay_name is not None and replay_name not in REPLAY_GENERATORS:
-        print("Error, unknown replay name: '{}', available: {}".format(
-            replay_name, ', '.join(REPLAY_GENERATORS.keys())))
-        sys.exit(1)
-    database = DbReplay()
-    database.reset_db()
-    replays_to_generate = REPLAY_GENERATORS.keys() if replay_name is None else [replay_name, ]
-    with replay_session_ctx() as session:
-        for current_replay in replays_to_generate:
-            replay_generator = REPLAY_GENERATORS[current_replay]
-            replay_generator(database, session)
-            print("Replay '{}' has been generated.".format(current_replay))
-    sys.exit(0)

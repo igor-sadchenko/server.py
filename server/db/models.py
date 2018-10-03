@@ -1,6 +1,6 @@
 """ DB models.
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -16,6 +16,7 @@ class Map(MapBase):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    active = Column(Boolean, default=False)
     size_x = Column(Integer)
     size_y = Column(Integer)
     lines = relationship('Line', backref='map', lazy='dynamic')

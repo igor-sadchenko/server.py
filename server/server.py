@@ -6,7 +6,8 @@ from socketserver import ThreadingTCPServer, BaseRequestHandler
 from invoke import task
 
 import errors
-from defs import SERVER_ADDR, SERVER_PORT, RECEIVE_CHUNK_SIZE, Action, Result
+from defs import Action, Result
+from config import CONFIG
 from entity.game import Game
 from entity.observer import Observer
 from entity.player import Player
@@ -41,7 +42,7 @@ class GameServerRequestHandler(BaseRequestHandler):
 
     def handle(self):
         while not self.closed:
-            data = self.request.recv(RECEIVE_CHUNK_SIZE)
+            data = self.request.recv(CONFIG.RECEIVE_CHUNK_SIZE)
             if data:
                 self.data_received(data)
             else:
@@ -183,9 +184,7 @@ class GameServerRequestHandler(BaseRequestHandler):
     @login_required
     def on_logout(self, _):
         log(log.INFO, "Logout player: {}".format(self.player.name))
-        self.player.in_game = False
-        if not any([p.in_game for p in self.game.players.values()]):
-            self.game.stop()
+        self.game.remove_player(self.player)
         self.closed = True
         self.write_response(Result.OKEY)
 
@@ -233,7 +232,7 @@ class GameServerRequestHandler(BaseRequestHandler):
 
 
 @task
-def run_server(_, address=SERVER_ADDR, port=SERVER_PORT):
+def run_server(_, address=CONFIG.SERVER_ADDR, port=CONFIG.SERVER_PORT):
     """ Launches 'WG Forge' TCP server.
     """
     server = ThreadingTCPServer((address, port), GameServerRequestHandler)

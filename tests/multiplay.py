@@ -6,17 +6,17 @@ from time import time
 
 from attrdict import AttrDict
 
-from server.db.map import generate_map04, DbMap
-from server.db.session import map_session_ctx
+from server.db.map import DbMap
 from server.defs import Action, Result
 from server.entity.event import Event, EventType
-from server.game_config import CONFIG
-from test.server_connection import ServerConnection
+from server.config import CONFIG
+from tests.server_connection import ServerConnection
 
 
 class TestMultiplay(unittest.TestCase):
     """ Multiplay test cases.
     """
+    MAP_NAME = 'map04'
     NUM_TOWNS = 4
     PLAYER_NAMES = [
         "Test Player Name 1",
@@ -26,15 +26,11 @@ class TestMultiplay(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        database = DbMap()
-        database.reset_db()
-        with map_session_ctx() as session:
-            generate_map04(database, session)
+        DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        database = DbMap()
-        database.reset_db()
+        DbMap().reset_db()
 
     def setUp(self):
         self.current_tick = 0
@@ -164,7 +160,7 @@ class TestMultiplay(unittest.TestCase):
     def test_login_and_turn(self):
         """ Test login one by one and forced turn.
         """
-        turns_num = 3
+        turns_num = 5
         players_in_game = 2
 
         self.login(self.players[0], num_players=players_in_game)

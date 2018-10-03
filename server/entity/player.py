@@ -3,7 +3,7 @@
 import json
 import uuid
 
-from game_config import CONFIG
+from config import CONFIG
 from entity.point import Point
 from entity.post import Post
 from entity.train import Train

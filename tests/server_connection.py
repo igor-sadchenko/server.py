@@ -4,7 +4,7 @@ import json
 import socket
 
 from server.defs import Result
-from server.game_config import CONFIG
+from server.config import CONFIG
 
 
 class ServerConnection(object):
