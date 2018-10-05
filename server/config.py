@@ -20,6 +20,9 @@ class BaseConfig(object):
         'replay': REPLAY_DB_URI,
     }
 
+    LOG_DIR = path.join(SRC_DIR, 'logs')
+    DEFAULT_LOG_FILE_NAME = 'logs'
+
     ACTION_HEADER = 4
     RESULT_HEADER = 4
     MSGLEN_HEADER = 4

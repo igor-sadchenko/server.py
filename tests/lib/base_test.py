@@ -15,8 +15,8 @@ class BaseTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(BaseTest, self).__init__(*args, **kwargs)
         self.test_start = datetime.now().strftime('%H:%M:%S.%f')
-        self.player_name = 'TEST_PLAYER_{}_{}'.format(self.id(), self.test_start)
-        self.game_name = 'TEST_GAME_{}_{}'.format(self.id(), self.test_start)
+        self.player_name = 'PLAYER_{}_{}'.format(self.id(), self.test_start)
+        self.game_name = 'GAME_{}_{}'.format(self.id(), self.test_start)
         self.current_tick = None
         self._connection = None
 

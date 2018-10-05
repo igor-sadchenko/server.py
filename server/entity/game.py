@@ -44,7 +44,7 @@ class Game(Thread):
 
     def __init__(self, name, observed=False, num_players=1):
         super(Game, self).__init__(name=name)
-        log(log.INFO, "Create game, name: '{}'".format(self.name))
+        log.info("Create game, name: '{}'".format(self.name))
         self.state = GameState.INIT
         self.observed = observed
         self.map = Map(use_active=True)
@@ -116,7 +116,7 @@ class Game(Thread):
                     self.trains[train.idx] = train
                     # Put the Train into Town:
                     self.put_train_into_town(train, with_cooldown=False)
-                log(log.INFO, "Add new player to the game, player: {}".format(player))
+                log.info("Add new player to the game, player: {}".format(player))
 
             # Start thread with game ticks:
             if not self.observed and self.num_players == len(self.players):
@@ -146,7 +146,7 @@ class Game(Thread):
     def stop(self):
         """ Stops ticks.
         """
-        log(log.INFO, "Game stopped, name: '{}'".format(self.name))
+        log.info("Game stopped, name: '{}'".format(self.name))
         self.state = GameState.FINISHED
         self._stop_event.set()
         if self.name in Game.GAMES:
@@ -184,7 +184,7 @@ class Game(Thread):
         """ Makes game tick. Updates dynamic game entities.
         """
         self.current_tick += 1
-        log(log.INFO, "Game tick, tick number: {}, game id: {}".format(self.current_tick, self.current_game_id))
+        log.info("Game tick, tick number: {}, game id: {}".format(self.current_tick, self.current_game_id))
         self.update_cooldowns_on_tick()  # Update cooldowns in the beginning of the tick.
         self.update_posts_on_tick()
         self.update_trains_positions_on_tick()
@@ -208,7 +208,7 @@ class Game(Thread):
             msg += ", post: {!r}".format(self.map.post[post_id].type)
             self.train_in_post(train, self.map.post[post_id])
 
-        log(log.INFO, msg)
+        log.info(msg)
 
         self.apply_next_train_move(train)
 
@@ -402,7 +402,7 @@ class Game(Thread):
         rand_percent = random.randint(1, 100)
         if rand_percent <= CONFIG.HIJACKERS_ASSAULT_PROBABILITY:
             hijackers_power = random.randint(*CONFIG.HIJACKERS_POWER_RANGE)
-            log(log.INFO, "Hijackers assault happened, hijackers power: {}".format(hijackers_power))
+            log.info("Hijackers assault happened, hijackers power: {}".format(hijackers_power))
             event = GameEvent(EventType.HIJACKERS_ASSAULT, self.current_tick, hijackers_power=hijackers_power)
             for player in self.players.values():
                 player.town.population = max(player.town.population - max(hijackers_power - player.town.armor, 0), 0)
@@ -423,7 +423,7 @@ class Game(Thread):
         rand_percent = random.randint(1, 100)
         if rand_percent <= CONFIG.PARASITES_ASSAULT_PROBABILITY:
             parasites_power = random.randint(*CONFIG.PARASITES_POWER_RANGE)
-            log(log.INFO, "Parasites assault happened, parasites power: {}".format(parasites_power))
+            log.info("Parasites assault happened, parasites power: {}".format(parasites_power))
             event = GameEvent(EventType.PARASITES_ASSAULT, self.current_tick, parasites_power=parasites_power)
             for player in self.players.values():
                 player.town.product = max(player.town.product - parasites_power, 0)
@@ -443,7 +443,7 @@ class Game(Thread):
         rand_percent = random.randint(1, 100)
         if rand_percent <= CONFIG.REFUGEES_ARRIVAL_PROBABILITY:
             refugees_number = random.randint(*CONFIG.REFUGEES_NUMBER_RANGE)
-            log(log.INFO, "Refugees arrival happened, refugees number: {}".format(refugees_number))
+            log.info("Refugees arrival happened, refugees number: {}".format(refugees_number))
             event = GameEvent(EventType.REFUGEES_ARRIVAL, self.current_tick, refugees_number=refugees_number)
             for player in self.players.values():
                 player.town.population += max(
@@ -538,7 +538,7 @@ class Game(Thread):
     def make_collision(self, train_1: Train, train_2: Train):
         """ Makes collision between two trains.
         """
-        log(log.INFO, "Trains collision happened, trains: [{}, {}]".format(train_1, train_2))
+        log.info("Trains collision happened, trains: [{}, {}]".format(train_1, train_2))
         self.put_train_into_town(train_1, with_unload=True, with_cooldown=True)
         self.put_train_into_town(train_2, with_unload=True, with_cooldown=True)
         train_1.event.append(GameEvent(EventType.TRAIN_COLLISION, self.current_tick, train=train_2.idx))
@@ -640,11 +640,11 @@ class Game(Thread):
             for post in posts:
                 player.town.armor -= post.next_level_price
                 post.set_level(post.level + 1)
-                log(log.INFO, "Post has been upgraded, post: {}".format(post))
+                log.info("Post has been upgraded, post: {}".format(post))
             for train in trains:
                 player.town.armor -= train.next_level_price
                 train.set_level(train.level + 1)
-                log(log.INFO, "Train has been upgraded, post: {}".format(train))
+                log.info("Train has been upgraded, post: {}".format(train))
 
     def get_map_layer(self, player, layer):
         """ Returns specified game map layer.
@@ -652,7 +652,7 @@ class Game(Thread):
         if layer not in (0, 1, 10):
             raise errors.ResourceNotFound("Map layer not found, layer: {}".format(layer))
 
-        log(log.INFO, "Load game map layer, layer: {}".format(layer))
+        log.info("Load game map layer, layer: {}".format(layer))
         message = self.map.layer_to_json_str(layer)
         if layer == 1:  # Add ratings. TODO: Improve this code.
             data = json.loads(message)
@@ -694,4 +694,4 @@ class Game(Thread):
                 train.cooldown = max(train.cooldown - 1, 0)
 
     def __del__(self):
-        log(log.INFO, "Game deleted, name: '{}'".format(self.name))
+        log.info("Game deleted, name: '{}'".format(self.name))

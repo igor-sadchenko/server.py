@@ -115,7 +115,7 @@ class Observer(object):
                 self._game_name = game_name
                 self.num_players = game['num_players']
                 self._map_name = game['map']
-                log(log.INFO, "Observer selected game: {}".format(game_name))
+                log.info("Observer selected game: {}".format(game_name))
                 self._actions = self._db.get_all_actions(game_id)
                 self.reset_game()
                 self._max_turn = game['length']

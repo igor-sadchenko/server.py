@@ -6,8 +6,8 @@ from socketserver import ThreadingTCPServer, BaseRequestHandler
 from invoke import task
 
 import errors
-from defs import Action, Result
 from config import CONFIG
+from defs import Action, Result
 from entity.game import Game
 from entity.observer import Observer
 from entity.player import Player
@@ -37,7 +37,7 @@ class GameServerRequestHandler(BaseRequestHandler):
         super(GameServerRequestHandler, self).__init__(*args, **kwargs)
 
     def setup(self):
-        log(log.INFO, "New connection from {}".format(self.client_address))
+        log.info("New connection from {}".format(self.client_address))
         self.closed = False
 
     def handle(self):
@@ -49,7 +49,7 @@ class GameServerRequestHandler(BaseRequestHandler):
                 self.closed = True
 
     def finish(self):
-        log(log.WARNING, "Connection from {0} lost".format(self.client_address))
+        log.warn("Connection from {0} lost".format(self.client_address))
         if self.player is not None:
             self.player.in_game = False
         if self.game is not None:
@@ -60,7 +60,7 @@ class GameServerRequestHandler(BaseRequestHandler):
             data = self.data + data
             self.data = None
         if self.process_data(data):
-            log(log.INFO, 'Player: {}, action: {!r}, message:\n{}'.format(
+            log.info('Player: {}, action: {!r}, message:\n{}'.format(
                 self.player.idx if self.player is not None else self.client_address,
                 Action(self.action), self.message))
             try:
@@ -89,7 +89,7 @@ class GameServerRequestHandler(BaseRequestHandler):
             except errors.ResourceNotFound as err:
                 self.error_response(Result.RESOURCE_NOT_FOUND, err)
             except Exception:
-                log(log.EXCEPTION, "Got unhandled exception on client command execution")
+                log.exception("Got unhandled exception on client command execution")
                 self.error_response(Result.INTERNAL_SERVER_ERROR)
             finally:
                 self.action = None
@@ -128,7 +128,7 @@ class GameServerRequestHandler(BaseRequestHandler):
 
     def write_response(self, result, message=None):
         resp_message = '' if message is None else message
-        log(log.DEBUG, 'Player: {}, result: {!r}, message:\n{}'.format(
+        log.debug('Player: {}, result: {!r}, message:\n{}'.format(
             self.player.idx if self.player is not None else self.client_address,
             result, resp_message))
         self.request.sendall(result.to_bytes(CONFIG.RESULT_HEADER, byteorder='little'))
@@ -139,7 +139,7 @@ class GameServerRequestHandler(BaseRequestHandler):
         if error is not None:
             error_msg = str(error)
             response_msg = json.dumps({'error': error_msg})
-            log(log.ERROR, error_msg)
+            log.error(error_msg)
         else:
             response_msg = ''
         self.write_response(result, response_msg)
@@ -177,13 +177,13 @@ class GameServerRequestHandler(BaseRequestHandler):
         self.player = player
         self.replay = game.replay
 
-        log(log.INFO, "Login player: {}".format(player))
+        log.info("Login player: {}".format(player))
         message = self.player.to_json_str()
         self.write_response(Result.OKEY, message)
 
     @login_required
     def on_logout(self, _):
-        log(log.INFO, "Logout player: {}".format(self.player.name))
+        log.info("Logout player: {}".format(self.player.name))
         self.game.remove_player(self.player)
         self.closed = True
         self.write_response(Result.OKEY)
@@ -232,18 +232,21 @@ class GameServerRequestHandler(BaseRequestHandler):
 
 
 @task
-def run_server(_, address=CONFIG.SERVER_ADDR, port=CONFIG.SERVER_PORT):
+def run_server(_, address=CONFIG.SERVER_ADDR, port=CONFIG.SERVER_PORT, log_level='INFO'):
     """ Launches 'WG Forge' TCP server.
     """
+    log.setLevel(log_level)
     server = ThreadingTCPServer((address, port), GameServerRequestHandler)
-    log(log.INFO, "Serving on {}".format(server.socket.getsockname()))
+    log.info("Serving on {}".format(server.socket.getsockname()))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        log(log.WARNING, "Server stopped by keyboard interrupt...")
+        log.warn("Server stopped by keyboard interrupt...")
     finally:
         try:
             Game.stop_all_games()
+            if log.is_queued:
+                log.stop()
         finally:
             server.shutdown()
             server.server_close()
