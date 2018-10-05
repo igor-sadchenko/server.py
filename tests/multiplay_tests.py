@@ -8,7 +8,7 @@ from attrdict import AttrDict
 
 from server.config import CONFIG
 from server.db.map import DbMap
-from server.defs import Action, Result
+from server.defs import Result
 from server.entity.event import Event, EventType
 from tests.lib.base_test import BaseTest
 from tests.lib.server_connection import ServerConnection

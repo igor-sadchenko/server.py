@@ -3,6 +3,7 @@
 import json
 
 from sqlalchemy import func
+from sqlalchemy.sql.expression import true
 
 import errors
 from db.models import Map as MapModel, Line as LineModel, Point as PointModel, Post as PostModel
@@ -41,7 +42,7 @@ class Map(object):
             if self.name:
                 _map = session.query(MapModel).filter(MapModel.name == self.name).first()
             elif self.use_active:
-                _map = session.query(MapModel).filter(MapModel.active == True).first()
+                _map = session.query(MapModel).filter(MapModel.active == true()).first()
             else:
                 raise errors.WgForgeServerError("Unable to initialize the map.")
 

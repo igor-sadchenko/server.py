@@ -47,7 +47,6 @@ class DbReplay(object):
         self.current_game_id = new_game.id
         return self.current_game_id
 
-    # pylint: disable=R0913
     @db_session
     def add_action(self, action, message, game_id=None, date=None, session=None):
         """ Creates new Action in DB.
