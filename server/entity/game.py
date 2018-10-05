@@ -83,8 +83,8 @@ class Game(Thread):
     def stop_all_games():
         """ Stops all games. Uses on server shutdown.
         """
-        for game in Game.GAMES.values():
-            game.stop()
+        for game_name in list(Game.GAMES.keys()):
+            Game.GAMES.pop(game_name).stop()
 
     def add_player(self, player: Player):
         """ Adds player to the game.
@@ -127,8 +127,7 @@ class Game(Thread):
         """ Removes player from the game.
         """
         player.in_game = False
-        if not any([p.in_game for p in self.players.values()]):
-            self.stop()
+        self.stop_if_no_players()
 
     def turn(self, player: Player):
         """ Makes next turn.
@@ -152,6 +151,12 @@ class Game(Thread):
         self._stop_event.set()
         if self.name in Game.GAMES:
             del Game.GAMES[self.name]
+
+    def stop_if_no_players(self):
+        """ Stops the game if there are no 'in_game' players.
+        """
+        if not any([p.in_game for p in self.players.values()]) and self.state != GameState.FINISHED:
+            self.stop()
 
     def run(self):
         """ Thread's activity. The loop with game ticks.
@@ -189,6 +194,8 @@ class Game(Thread):
         self.refugees_arrival_on_tick()
         self.hijackers_assault_on_tick()
         self.parasites_assault_on_tick()
+        # TODO: refactor login
+        self.stop_if_no_players()
 
     def train_in_point(self, train: Train, point_id: int):
         """ Makes all needed actions when Train arrives to Point.
@@ -665,6 +672,7 @@ class Game(Thread):
     def clean_user_events(self, player):
         """ Cleans all existing events.
         """
+        # TODO: leave only last 5-10 events
         for train in self.map.train.values():
             if train.player_id == player.idx:
                 train.event = []

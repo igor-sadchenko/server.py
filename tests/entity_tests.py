@@ -1,5 +1,6 @@
 """ Test server entities.
 """
+
 import json
 import unittest
 
@@ -23,12 +24,6 @@ class TestEntity(unittest.TestCase):
     def tearDownClass(cls):
         DbMap().reset_db()
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     def test_map_init(self):
         """ Test create map entity.
         """
@@ -36,7 +31,7 @@ class TestEntity(unittest.TestCase):
         train = Train(idx=1, line_idx=game_map.line[1].idx, position=0)
         game_map.add_train(train)
 
-        self.assertTrue(game_map.okey)
+        self.assertTrue(game_map.initialized)
         self.assertEqual(len(game_map.line), 18)
         self.assertEqual(len(game_map.point), 12)
         self.assertNotEqual(game_map.size, (None, None))

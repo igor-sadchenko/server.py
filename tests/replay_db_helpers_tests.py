@@ -1,5 +1,6 @@
 """ Test replay DB helpers.
 """
+
 import unittest
 from datetime import datetime
 
@@ -10,10 +11,6 @@ from server.defs import Action as ActionCodes
 
 
 class TestReplayDb(unittest.TestCase):
-    """ Test class.
-    """
-
-    PLAYER_NAME = '-=TEST OBSERVER=-'
 
     def setUp(self):
         self.db = DbReplay()

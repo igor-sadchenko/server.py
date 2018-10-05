@@ -1,89 +1,33 @@
-import json
-import unittest
-from datetime import datetime
+""" Tests for game random events.
+"""
 
-from server.db.map import DbMap
-from server.defs import Action, Result
-from server.entity.event import Event, EventType
 from server.config import CONFIG
-from tests.server_connection import ServerConnection
+from server.db.map import DbMap
+from server.entity.event import Event, EventType
+from tests.lib.base_test import BaseTest
 
 
-class TestGameEvents(unittest.TestCase):
-    """ Test class for a Game Player.
-    """
+class TestGameEvents(BaseTest):
+
     MAP_NAME = 'map02'
-    PLAYER_NAME = 'Test Player Name ' + datetime.now().strftime('%H:%M:%S.%f')
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
         DbMap().reset_db()
-
-    def do_action(self, action, data):
-        return self.connection.send_action(action, data)
+        super().tearDownClass()
 
     def setUp(self):
-        self.connection = ServerConnection()
+        super().setUp()
         self.player = self.login()
-        self.current_tick = 0
 
     def tearDown(self):
         self.logout()
-        self.connection.close()
-
-    def login(self):
-        result, message = self.do_action(Action.LOGIN, {'name': self.PLAYER_NAME})
-        self.assertEqual(Result.OKEY, result)
-        return json.loads(message)
-
-    def logout(self):
-        result, _ = self.do_action(Action.LOGOUT, None)
-        self.assertEqual(Result.OKEY, result)
-
-    def turn(self, turns_count=1):
-        for _ in range(turns_count):
-            self.current_tick += 1
-            result, _ = self.do_action(Action.TURN, {})
-            self.assertEqual(Result.OKEY, result)
-
-    def get_post(self, post_id):
-        data = self.get_map(1)
-        posts = {x['idx']: x for x in data['post']}
-        self.assertIn(post_id, posts)
-        return posts[post_id]
-
-    def get_map(self, layer):
-        result, message = self.do_action(Action.MAP, {'layer': layer})
-        self.assertEqual(Result.OKEY, result)
-        return json.loads(message)
-
-    def check_refugees_arrival_event(self, events, ok_event):
-        for event in events:
-            if (event['type'] == ok_event.type
-                    and event['refugees_number'] == ok_event.refugees_number
-                    and event['tick'] == ok_event.tick):
-                return True
-        return False
-
-    def check_hijackers_assault_event(self, events, ok_event):
-        for event in events:
-            if (event['type'] == ok_event.type
-                    and event['hijackers_power'] == ok_event.hijackers_power
-                    and event['tick'] == ok_event.tick):
-                return True
-        return False
-
-    def check_parasites_assault_event(self, events, ok_event):
-        for event in events:
-            if (event['type'] == ok_event.type
-                    and event['parasites_power'] == ok_event.parasites_power
-                    and event['tick'] == ok_event.tick):
-                return True
-        return False
+        super().tearDown()
 
     def test_refugees_arrival(self):
         turns_num = 6

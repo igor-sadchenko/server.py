@@ -53,8 +53,7 @@ class GameServerRequestHandler(BaseRequestHandler):
         if self.player is not None:
             self.player.in_game = False
         if self.game is not None:
-            if not any([p.in_game for p in self.game.players.values()]):
-                self.game.stop()
+            self.game.stop_if_no_players()
 
     def data_received(self, data):
         if self.data:
@@ -94,36 +93,37 @@ class GameServerRequestHandler(BaseRequestHandler):
                 self.error_response(Result.INTERNAL_SERVER_ERROR)
             finally:
                 self.action = None
+                self.message_len = None
+                self.message = None
 
     def process_data(self, data):
         """ Parses input command.
         returns: True if command parsing completed
         """
-        # Read action [4 bytes]:
-        if not self.action:
-            if len(data) < 4:
+        # Read action:
+        if self.action is None:
+            if len(data) < CONFIG.ACTION_HEADER:
                 self.data = data
                 return False
-            self.action = Action(int.from_bytes(data[0:4], byteorder='little'))
-            self.message_len = 0
-            data = data[4:]
-            if self.action in (Action.LOGOUT, Action.OBSERVER):  # Commands without data.
-                self.data = b''
-                self.message = '{}'
-                return True
+            self.action = Action(int.from_bytes(data[0:CONFIG.ACTION_HEADER], byteorder='little'))
+            data = data[CONFIG.ACTION_HEADER:]
+
         # Read size of message:
-        if not self.message_len:
-            if len(data) < 4:
+        if self.message_len is None:
+            if len(data) < CONFIG.MSGLEN_HEADER:
                 self.data = data
                 return False
-            self.message_len = int.from_bytes(data[0:4], byteorder='little')
-            data = data[4:]
+            self.message_len = int.from_bytes(data[0:CONFIG.MSGLEN_HEADER], byteorder='little')
+            data = data[CONFIG.MSGLEN_HEADER:]
+
         # Read message:
-        if len(data) < self.message_len:
-            self.data = data
-            return False
-        self.message = data[0:self.message_len].decode('utf-8')
-        self.data = data[self.message_len:]
+        if self.message is None:
+            if len(data) < self.message_len:
+                self.data = data
+                return False
+            self.message = data[0:self.message_len].decode('utf-8') or '{}'
+            self.data = data[self.message_len:]
+
         return True
 
     def write_response(self, result, message=None):
@@ -131,8 +131,8 @@ class GameServerRequestHandler(BaseRequestHandler):
         log(log.DEBUG, 'Player: {}, result: {!r}, message:\n{}'.format(
             self.player.idx if self.player is not None else self.client_address,
             result, resp_message))
-        self.request.sendall(result.to_bytes(4, byteorder='little'))
-        self.request.sendall(len(resp_message).to_bytes(4, byteorder='little'))
+        self.request.sendall(result.to_bytes(CONFIG.RESULT_HEADER, byteorder='little'))
+        self.request.sendall(len(resp_message).to_bytes(CONFIG.MSGLEN_HEADER, byteorder='little'))
         self.request.sendall(resp_message.encode('utf-8'))
 
     def error_response(self, result, error=None):

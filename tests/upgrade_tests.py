@@ -1,122 +1,33 @@
 """ Tests for action UPGRADE.
 """
 
-import json
-import unittest
-from datetime import datetime
-
-from server.db.map import DbMap
-from server.defs import Action, Result
 from server.config import CONFIG
-from tests.server_connection import ServerConnection
+from server.db.map import DbMap
+from server.defs import Result
+from tests.lib.base_test import BaseTest
 
 
-class TestUpgrade(unittest.TestCase):
-    """ Test class for a Game Player.
-    """
+class TestUpgrade(BaseTest):
+
     MAP_NAME = 'map02'
-    PLAYER_NAME = 'Test Player Name ' + datetime.now().strftime('%H:%M:%S.%f')
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
         DbMap().reset_db()
-
-    def do_action(self, action, data):
-        return self.connection.send_action(action, data)
+        super().tearDownClass()
 
     def setUp(self):
-        self.connection = ServerConnection()
+        super().setUp()
         self.player = self.login()
-        self.current_tick = 0
 
     def tearDown(self):
         self.logout()
-        self.connection.close()
-
-    def login(self):
-        result, message = self.do_action(Action.LOGIN, {'name': self.PLAYER_NAME})
-        self.assertEqual(Result.OKEY, result)
-        return json.loads(message)
-
-    def logout(self):
-        result, _ = self.do_action(Action.LOGOUT, None)
-        self.assertEqual(Result.OKEY, result)
-
-    def turn(self, turns_count=1):
-        for _ in range(turns_count):
-            self.current_tick += 1
-            result, _ = self.do_action(Action.TURN, {})
-            self.assertEqual(Result.OKEY, result)
-
-    def move_train(self, line_idx, train_idx, speed):
-        result, _ = self.do_action(
-            Action.MOVE,
-            {
-                'train_idx': train_idx,
-                'speed': speed,
-                'line_idx': line_idx
-            }
-        )
-        self.assertEqual(Result.OKEY, result)
-
-    def upgrade(self, posts=(), trains=(), exp_result=Result.OKEY):
-        result, _ = self.do_action(
-            Action.UPGRADE,
-            {
-                'post': posts,
-                'train': trains
-            }
-        )
-        self.assertEqual(exp_result, result)
-
-    def get_train(self, train_id):
-        data = self.get_map(1)
-        trains = {x['idx']: x for x in data['train']}
-        self.assertIn(train_id, trains)
-        return trains[train_id]
-
-    def get_post(self, post_id):
-        data = self.get_map(1)
-        posts = {x['idx']: x for x in data['post']}
-        self.assertIn(post_id, posts)
-        return posts[post_id]
-
-    def get_train_line(self, train_id):
-        train = self.get_train(train_id)
-        return train['line_idx']
-
-    def get_train_speed(self, train_id):
-        train = self.get_train(train_id)
-        return train['speed']
-
-    def get_map(self, layer):
-        result, message = self.do_action(Action.MAP, {'layer': layer})
-        self.assertEqual(Result.OKEY, result)
-        return json.loads(message)
-
-    def move_train_to_next_line(self, next_line_id, train_idx, speed):
-        max_line_lenght = 1000
-        self.move_train(next_line_id, train_idx, speed)
-        for _ in range(max_line_lenght):
-            self.turn()
-            if next_line_id == self.get_train_line(train_idx):
-                break
-        else:
-            self.fail("Can't arrive to line: {}".format(next_line_id))
-
-    def move_train_and_go_to_line_end(self, line_idx, train_idx, speed):
-        max_line_lenght = 1000
-        self.move_train(line_idx, train_idx, speed)
-        for _ in range(max_line_lenght):
-            self.turn()
-            if self.get_train_speed(train_idx) == 0:
-                break
-        else:
-            self.fail("Can't arrive to line end: {}".format(line_idx))
+        super().tearDown()
 
     def test_upgrade_train(self):
         test_line_idx = 18
@@ -124,8 +35,8 @@ class TestUpgrade(unittest.TestCase):
         train_1 = self.player['train'][0]
         train_2 = self.player['train'][1]
 
-        self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], -1)
-        self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], 1)
+        self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
+        self.move_train_until_stop(test_line_idx, train_1['idx'], 1)
         armor = self.get_post(town['idx'])['armor']
         self.assertEqual(armor, town['armor'] + train_1['goods_capacity'])
 
@@ -172,11 +83,11 @@ class TestUpgrade(unittest.TestCase):
         train_1 = self.player['train'][0]
         train_2 = self.player['train'][1]
 
-        self.move_train_and_go_to_line_end(test_line_idx_1, train_1['idx'], -1)
-        self.move_train_and_go_to_line_end(test_line_idx_1, train_1['idx'], 1)
+        self.move_train_until_stop(test_line_idx_1, train_1['idx'], -1)
+        self.move_train_until_stop(test_line_idx_1, train_1['idx'], 1)
         armor = self.get_post(town['idx'])['armor']
         self.assertEqual(armor, town['armor'] + train_1['goods_capacity'])
-        self.move_train_and_go_to_line_end(test_line_idx_2, train_1['idx'], 1)
+        self.move_train_until_stop(test_line_idx_2, train_1['idx'], 1)
 
         armor_to_pay = train_1['next_level_price']
         # Check that player have enough armor to upgrade train:
@@ -200,11 +111,11 @@ class TestUpgrade(unittest.TestCase):
         train_1 = self.player['train'][0]
         train_2 = self.player['train'][1]
 
-        self.move_train_and_go_to_line_end(test_line_idx_1, train_1['idx'], -1)
-        self.move_train_and_go_to_line_end(test_line_idx_1, train_1['idx'], 1)
+        self.move_train_until_stop(test_line_idx_1, train_1['idx'], -1)
+        self.move_train_until_stop(test_line_idx_1, train_1['idx'], 1)
         armor = self.get_post(town['idx'])['armor']
         self.assertEqual(armor, town['armor'] + train_1['goods_capacity'])
-        self.move_train_and_go_to_line_end(test_line_idx_2, train_1['idx'], 1)
+        self.move_train_until_stop(test_line_idx_2, train_1['idx'], 1)
 
         armor_to_pay = train_1['next_level_price']
         # Check that player have enough armor to upgrade train:
@@ -229,8 +140,8 @@ class TestUpgrade(unittest.TestCase):
         train_2 = self.player['train'][1]
 
         for _ in range(len(CONFIG.TRAIN_LEVELS.keys()) - 2):
-            self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], -1)
-            self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], 1)
+            self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
+            self.move_train_until_stop(test_line_idx, train_1['idx'], 1)
             self.turn(wait_for_replenishment)
 
             curr_train_1 = self.get_train(train_1['idx'])
@@ -252,8 +163,8 @@ class TestUpgrade(unittest.TestCase):
             self.assertEqual(map_data['train'][1]['next_level_price'], curr_train_2['next_level_price'])
 
         # Try to upgrade train to non-existing level:
-        self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], -1)
-        self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], 1)
+        self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
+        self.move_train_until_stop(test_line_idx, train_1['idx'], 1)
 
         curr_train_1 = self.get_train(train_1['idx'])
         curr_train_2 = self.get_train(train_2['idx'])
@@ -279,8 +190,8 @@ class TestUpgrade(unittest.TestCase):
         train_2 = self.player['train'][1]
 
         for _ in range(trips):
-            self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], -1)
-            self.move_train_and_go_to_line_end(test_line_idx, train_1['idx'], 1)
+            self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
+            self.move_train_until_stop(test_line_idx, train_1['idx'], 1)
             self.turn(wait_for_replenishment)
 
         armor = self.get_post(town['idx'])['armor']

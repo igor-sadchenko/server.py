@@ -19,6 +19,10 @@ class BaseConfig(object):
         'map': MAP_DB_URI,
         'replay': REPLAY_DB_URI,
     }
+
+    ACTION_HEADER = 4
+    RESULT_HEADER = 4
+    MSGLEN_HEADER = 4
     RECEIVE_CHUNK_SIZE = 1024
 
     TICK_TIME = 10
@@ -106,6 +110,7 @@ class TestingConfig(BaseConfig):
     REFUGEES_ARRIVAL_PROBABILITY = 0
     EVENT_COOLDOWNS_ON_START = {}
     TRAIN_ALWAYS_DEVASTATED = False  # There is at least one test which awaits non-devastated train, TODO: check it
+    MAX_LINE_LENGTH = 1000
 
 
 class TestingConfigWithEvents(TestingConfig):

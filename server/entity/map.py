@@ -28,7 +28,7 @@ class Map(object):
         self.train = {}
 
         # Attributes not included into json representation:
-        self.okey = False
+        self.initialized = False
         self.markets = []
         self.storages = []
         self.towns = []
@@ -73,7 +73,7 @@ class Map(object):
             self.storages = [s for s in self.post.values() if s.type == PostType.STORAGE]
             self.towns = [t for t in self.post.values() if t.type == PostType.TOWN]
 
-        self.okey = True
+        self.initialized = True
 
     def add_train(self, train):
         self.train[train.idx] = train
@@ -109,7 +109,7 @@ class Map(object):
             }
         if data.get('coordinate'):
             self.coordinate = {c['idx']: {'idx': c['idx'], 'x': c['x'], 'y': c['y']} for c in data['coordinate']}
-        self.okey = True
+        self.initialized = True
 
     def layer_to_json_str(self, layer):
         data = {}
