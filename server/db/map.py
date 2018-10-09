@@ -51,7 +51,7 @@ class DbMap(object):
         """ Creates new Line in DB.
         """
         _map_id = self.current_map_id if map_id is None else map_id
-        new_line = Line(len=length, p0=p0, p1=p1, map_id=_map_id)
+        new_line = Line(length=length, p0=p0, p1=p1, map_id=_map_id)
         session.add(new_line)
         session.commit()  # Commit to get line's id.
         return new_line.id
@@ -115,7 +115,7 @@ class DbMap(object):
 
         for map_name in maps_to_generate:
             if map_name not in maps:
-                err_msg = "Error, unknown map name: '{}', available: {}.".format(map_name, ', '.join(maps.keys()))
+                err_msg = "Error, unknown map name: '{}', available: {}".format(map_name, ', '.join(maps.keys()))
                 logger.error(err_msg)
                 raise ValueError(err_msg)
 
@@ -124,19 +124,19 @@ class DbMap(object):
 
             self.add_map(name=m['name'], size_x=m['size'][0], size_y=m['size'][1], session=session)
 
-            point_ids = []
+            points_idx = []
             for point in m['points']:
-                point_id = self.add_point(x=point[0], y=point[1], session=session)
-                point_ids.append(point_id)
+                point_idx = self.add_point(x=point[0], y=point[1], session=session)
+                points_idx.append(point_idx)
 
             for post in m['posts']:
-                self.add_post(point_ids[post.pop('point') - 1], post.pop('name'), post.pop('type'),
+                self.add_post(points_idx[post.pop('point') - 1], post.pop('name'), post.pop('type'),
                               session=session, **post)
 
             for line in m['lines']:
-                self.add_line(line[0], point_ids[line[1] - 1], point_ids[line[2] - 1], session=session)
+                self.add_line(line[0], points_idx[line[1] - 1], points_idx[line[2] - 1], session=session)
 
-            logger.info("Map '{}' has been generated.".format(map_name))
+            logger.info("Map '{}' has been generated".format(map_name))
 
         if active_map is not None:
             self.set_active_map(active_map, session=session)

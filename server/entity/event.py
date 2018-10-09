@@ -21,8 +21,9 @@ class Event(Serializable):
     def __init__(self, event_type: EventType, tick, **kwargs):
         self.type = event_type
         self.tick = tick
-        for key, value in kwargs.items():  # Additional info from kwargs.
+        # Additional attributes info from kwargs:
+        for key, value in kwargs.items():
             setattr(self, key, value)
 
     def __repr__(self):
-        return "<Event(type={}, tick={})>".format(self.type, self.tick)
+        return '<Event(type={}, tick={})>'.format(self.type, self.tick)

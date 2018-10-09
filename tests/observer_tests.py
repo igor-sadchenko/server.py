@@ -46,10 +46,10 @@ class TestObserver(BaseTest):
         self.set_game(1)
         data = self.get_map(0)
         self.assertNotEqual(len(data), 0)
-        self.assertIn('line', data)
-        lines = {x['idx']: x for x in data['line']}
-        self.assertEqual(lines[1]['point'][0], 1)
-        self.assertEqual(lines[1]['point'][1], 2)
+        self.assertIn('lines', data)
+        lines = {x['idx']: x for x in data['lines']}
+        self.assertEqual(lines[1]['points'][0], 1)
+        self.assertEqual(lines[1]['points'][1], 2)
         train = self.get_train(1)
         self.assertEqual(train['speed'], 0)
         self.assertEqual(train['line_idx'], 1)
@@ -95,10 +95,10 @@ class TestObserver(BaseTest):
         self.set_game(1)
         data = self.get_map(10)
         self.assertIn('idx', data.keys())
-        self.assertIn('coordinate', data.keys())
+        self.assertIn('coordinates', data.keys())
         self.assertIn('size', data.keys())
-        self.assertNotIn('line', data.keys())
-        self.assertNotIn('point', data.keys())
+        self.assertNotIn('lines', data.keys())
+        self.assertNotIn('points', data.keys())
 
     def test_game_writes_turns_on_ticks(self):
         """ Verify if game on server writes to replay.db on game's tick.

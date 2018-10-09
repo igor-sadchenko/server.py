@@ -160,7 +160,7 @@ class GameServerRequestHandler(BaseRequestHandler):
             game_name = data['game']
             num_players = data['num_players']
 
-        game = Game.create(game_name, num_players)
+        game = Game.create(game_name, num_players=num_players)
         if game.num_players != num_players:
             raise errors.BadCommand(
                 "Incorrect players number requested, game: {}, game players number: {}, "
@@ -209,7 +209,7 @@ class GameServerRequestHandler(BaseRequestHandler):
     def on_upgrade(self, data: dict):
         self.check_keys(data, ['train', 'post'], agg_func=any)
         self.game.make_upgrade(
-            self.player, post_ids=data.get('post', []), train_ids=data.get('train', [])
+            self.player, posts_idx=data.get('post', []), trains_idx=data.get('train', [])
         )
         self.write_response(Result.OKEY)
 

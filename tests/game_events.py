@@ -42,7 +42,7 @@ class TestGameEvents(BaseTest):
             self.turn()
             town = self.get_post(town_idx)
             check_event_result = self.check_refugees_arrival_event(
-                town['event'],
+                town['events'],
                 Event(EventType.REFUGEES_ARRIVAL, self.current_tick, refugees_number=refugees_number)
             )
             if self.current_tick in turns_with_refugees:
@@ -68,7 +68,7 @@ class TestGameEvents(BaseTest):
             self.turn()
             town = self.get_post(town_idx)
             check_event_result = self.check_hijackers_assault_event(
-                town['event'],
+                town['events'],
                 Event(EventType.HIJACKERS_ASSAULT, self.current_tick, hijackers_power=hijackers_power)
             )
             if self.current_tick in turns_with_assault:
@@ -109,7 +109,7 @@ class TestGameEvents(BaseTest):
             self.turn()
             town = self.get_post(town_idx)
             check_event_result = self.check_parasites_assault_event(
-                town['event'],
+                town['events'],
                 Event(EventType.PARASITES_ASSAULT, self.current_tick, parasites_power=parasites_power)
             )
             if self.current_tick in turns_with_assault:

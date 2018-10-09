@@ -139,10 +139,10 @@ class TestMultiplay(BaseTest):
 
         # Move my train:
         valid_line = 1
-        self.move_train(valid_line, player0.train[0].idx, 1, connection=self.players[0].conn)
+        self.move_train(valid_line, player0.trains[0].idx, 1, connection=self.players[0].conn)
         # Move foreign train:
         valid_line = 19
-        message = self.move_train(valid_line, player1.train[0].idx, -1,
+        message = self.move_train(valid_line, player1.trains[0].idx, -1,
                                   exp_result=Result.ACCESS_DENIED, connection=self.players[0].conn)
         self.assertIn('error', message)
         self.assertIn('Train\'s owner mismatch', message['error'])
@@ -166,10 +166,10 @@ class TestMultiplay(BaseTest):
             (60, 1, 4),
         ]
         for line_idx, speed, length in path:
-            self.move_train(line_idx, player0.train[0].idx, speed, connection=self.players[0].conn)
+            self.move_train(line_idx, player0.trains[0].idx, speed, connection=self.players[0].conn)
             self.players_turn(self.players[:players_in_game], turns_count=length)
 
-        train_before = AttrDict(self.get_train(player0.train[0].idx, connection=self.players[0].conn))
+        train_before = AttrDict(self.get_train(player0.trains[0].idx, connection=self.players[0].conn))
 
         # Path to foreign Town:
         path = [
@@ -184,10 +184,10 @@ class TestMultiplay(BaseTest):
             (9, 1, 4),
         ]
         for line_idx, speed, length in path:
-            self.move_train(line_idx, player0.train[0].idx, speed, connection=self.players[0].conn)
+            self.move_train(line_idx, player0.trains[0].idx, speed, connection=self.players[0].conn)
             self.players_turn(self.players[:players_in_game], turns_count=length)
 
-        train_after = AttrDict(self.get_train(player0.train[0].idx, connection=self.players[0].conn))
+        train_after = AttrDict(self.get_train(player0.trains[0].idx, connection=self.players[0].conn))
 
         self.assertGreater(train_before.goods, 0)
         self.assertEqual(train_before.goods, train_after.goods)
@@ -203,8 +203,8 @@ class TestMultiplay(BaseTest):
                                       connection=self.players[1].conn))
         town0 = AttrDict(self.get_post(player0.town.idx, connection=self.players[0].conn))
         town1 = AttrDict(self.get_post(player1.town.idx, connection=self.players[1].conn))
-        train0 = AttrDict(self.get_train(player0.train[0].idx, connection=self.players[0].conn))
-        train1 = AttrDict(self.get_train(player1.train[0].idx, connection=self.players[1].conn))
+        train0 = AttrDict(self.get_train(player0.trains[0].idx, connection=self.players[0].conn))
+        train1 = AttrDict(self.get_train(player1.trains[0].idx, connection=self.players[1].conn))
 
         # Mine armor for 1-st player:
         # Path to Storage:
@@ -279,8 +279,8 @@ class TestMultiplay(BaseTest):
                                       connection=self.players[0].conn))
         player1 = AttrDict(self.login(self.players[1].name, num_players=players_in_game,
                                       connection=self.players[1].conn))
-        train0 = AttrDict(self.get_train(player0.train[0].idx, connection=self.players[0].conn))
-        train1 = AttrDict(self.get_train(player1.train[0].idx, connection=self.players[1].conn))
+        train0 = AttrDict(self.get_train(player0.trains[0].idx, connection=self.players[0].conn))
+        train1 = AttrDict(self.get_train(player1.trains[0].idx, connection=self.players[1].conn))
 
         # Path to collision for 1-st train:
         path = [
@@ -305,20 +305,20 @@ class TestMultiplay(BaseTest):
             self.move_train(line_idx, train1.idx, speed, connection=self.players[1].conn)
             self.players_turn(self.players[:players_in_game], turns_count=length)
 
-        train0_after = AttrDict(self.get_train(player0.train[0].idx, connection=self.players[0].conn))
+        train0_after = AttrDict(self.get_train(player0.trains[0].idx, connection=self.players[0].conn))
         self.assertTrue(
             self.check_collision_event(
-                train0_after.event,
+                train0_after.events,
                 Event(EventType.TRAIN_COLLISION, self.current_tick, train=train1.idx)
             )
         )
         self.assertEqual(train0_after.line_idx, train0.line_idx)
         self.assertEqual(train0_after.position, train0.position)
 
-        train1_after = AttrDict(self.get_train(player1.train[0].idx, connection=self.players[1].conn))
+        train1_after = AttrDict(self.get_train(player1.trains[0].idx, connection=self.players[1].conn))
         self.assertTrue(
             self.check_collision_event(
-                train1_after.event,
+                train1_after.events,
                 Event(EventType.TRAIN_COLLISION, self.current_tick, train=train0.idx)
             )
         )
@@ -352,10 +352,10 @@ class TestMultiplay(BaseTest):
         )
 
         for lines in line_path:
-            self.move_train(lines[0], player0.train[0].idx, 1, connection=self.players[0].conn)
-            self.move_train(lines[1], player1.train[0].idx, 1, connection=self.players[1].conn)
-            self.move_train(lines[2], player2.train[0].idx, -1, connection=self.players[2].conn)
-            self.move_train(lines[3], player3.train[0].idx, -1, connection=self.players[3].conn)
+            self.move_train(lines[0], player0.trains[0].idx, 1, connection=self.players[0].conn)
+            self.move_train(lines[1], player1.trains[0].idx, 1, connection=self.players[1].conn)
+            self.move_train(lines[2], player2.trains[0].idx, -1, connection=self.players[2].conn)
+            self.move_train(lines[3], player3.trains[0].idx, -1, connection=self.players[3].conn)
             self.players_turn(self.players[:players_in_game], turns_count=5)
 
         for i in range(players_in_game):

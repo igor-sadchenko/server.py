@@ -32,8 +32,8 @@ class TestUpgrade(BaseTest):
     def test_upgrade_train(self):
         test_line_idx = 18
         town = self.player['town']
-        train_1 = self.player['train'][0]
-        train_2 = self.player['train'][1]
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
 
         self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
         self.move_train_until_stop(test_line_idx, train_1['idx'], 1)
@@ -48,17 +48,17 @@ class TestUpgrade(BaseTest):
         map_data = self.get_map(1)
 
         self.assertEqual(self.get_post(town['idx'])['armor'], armor - armor_to_pay)
-        self.assertEqual(map_data['train'][0]['level'], train_1['level'] + 1)
-        self.assertGreater(map_data['train'][0]['goods_capacity'], train_1['goods_capacity'])
-        self.assertGreater(map_data['train'][0]['next_level_price'], train_1['next_level_price'])
-        self.assertEqual(map_data['train'][1]['level'], train_2['level'])
-        self.assertEqual(map_data['train'][1]['goods_capacity'], train_2['goods_capacity'])
-        self.assertEqual(map_data['train'][1]['next_level_price'], train_2['next_level_price'])
+        self.assertEqual(map_data['trains'][0]['level'], train_1['level'] + 1)
+        self.assertGreater(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
+        self.assertGreater(map_data['trains'][0]['next_level_price'], train_1['next_level_price'])
+        self.assertEqual(map_data['trains'][1]['level'], train_2['level'])
+        self.assertEqual(map_data['trains'][1]['goods_capacity'], train_2['goods_capacity'])
+        self.assertEqual(map_data['trains'][1]['next_level_price'], train_2['next_level_price'])
 
     def test_no_upgrade_train_when_no_enough_armor(self):
         town = self.player['town']
-        train_1 = self.player['train'][0]
-        train_2 = self.player['train'][1]
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
         start_armor = self.get_post(town['idx'])['armor']
         armor_to_pay = train_1['next_level_price']
 
@@ -69,19 +69,19 @@ class TestUpgrade(BaseTest):
         map_data = self.get_map(1)
 
         self.assertEqual(self.get_post(town['idx'])['armor'], start_armor)
-        self.assertEqual(map_data['train'][0]['level'], train_1['level'])
-        self.assertEqual(map_data['train'][0]['goods_capacity'], train_1['goods_capacity'])
-        self.assertEqual(map_data['train'][0]['next_level_price'], train_1['next_level_price'])
-        self.assertEqual(map_data['train'][1]['level'], train_2['level'])
-        self.assertEqual(map_data['train'][1]['goods_capacity'], train_2['goods_capacity'])
-        self.assertEqual(map_data['train'][1]['next_level_price'], train_2['next_level_price'])
+        self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
+        self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
+        self.assertEqual(map_data['trains'][0]['next_level_price'], train_1['next_level_price'])
+        self.assertEqual(map_data['trains'][1]['level'], train_2['level'])
+        self.assertEqual(map_data['trains'][1]['goods_capacity'], train_2['goods_capacity'])
+        self.assertEqual(map_data['trains'][1]['next_level_price'], train_2['next_level_price'])
 
     def test_no_upgrade_if_train_not_in_town_1(self):
         test_line_idx_1 = 18
         test_line_idx_2 = 13
         town = self.player['town']
-        train_1 = self.player['train'][0]
-        train_2 = self.player['train'][1]
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
 
         self.move_train_until_stop(test_line_idx_1, train_1['idx'], -1)
         self.move_train_until_stop(test_line_idx_1, train_1['idx'], 1)
@@ -97,19 +97,19 @@ class TestUpgrade(BaseTest):
         map_data = self.get_map(1)
 
         self.assertEqual(self.get_post(town['idx'])['armor'], armor)
-        self.assertEqual(map_data['train'][0]['level'], train_1['level'])
-        self.assertEqual(map_data['train'][0]['goods_capacity'], train_1['goods_capacity'])
-        self.assertEqual(map_data['train'][0]['next_level_price'], train_1['next_level_price'])
-        self.assertEqual(map_data['train'][1]['level'], train_2['level'])
-        self.assertEqual(map_data['train'][1]['goods_capacity'], train_2['goods_capacity'])
-        self.assertEqual(map_data['train'][1]['next_level_price'], train_2['next_level_price'])
+        self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
+        self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
+        self.assertEqual(map_data['trains'][0]['next_level_price'], train_1['next_level_price'])
+        self.assertEqual(map_data['trains'][1]['level'], train_2['level'])
+        self.assertEqual(map_data['trains'][1]['goods_capacity'], train_2['goods_capacity'])
+        self.assertEqual(map_data['trains'][1]['next_level_price'], train_2['next_level_price'])
 
     def test_no_upgrade_if_train_not_in_town_2(self):
         test_line_idx_1 = 18
         test_line_idx_2 = 1
         town = self.player['town']
-        train_1 = self.player['train'][0]
-        train_2 = self.player['train'][1]
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
 
         self.move_train_until_stop(test_line_idx_1, train_1['idx'], -1)
         self.move_train_until_stop(test_line_idx_1, train_1['idx'], 1)
@@ -125,19 +125,19 @@ class TestUpgrade(BaseTest):
         map_data = self.get_map(1)
 
         self.assertEqual(self.get_post(town['idx'])['armor'], armor)
-        self.assertEqual(map_data['train'][0]['level'], train_1['level'])
-        self.assertEqual(map_data['train'][0]['goods_capacity'], train_1['goods_capacity'])
-        self.assertEqual(map_data['train'][0]['next_level_price'], train_1['next_level_price'])
-        self.assertEqual(map_data['train'][1]['level'], train_2['level'])
-        self.assertEqual(map_data['train'][1]['goods_capacity'], train_2['goods_capacity'])
-        self.assertEqual(map_data['train'][1]['next_level_price'], train_2['next_level_price'])
+        self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
+        self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
+        self.assertEqual(map_data['trains'][0]['next_level_price'], train_1['next_level_price'])
+        self.assertEqual(map_data['trains'][1]['level'], train_2['level'])
+        self.assertEqual(map_data['trains'][1]['goods_capacity'], train_2['goods_capacity'])
+        self.assertEqual(map_data['trains'][1]['next_level_price'], train_2['next_level_price'])
 
     def test_no_upgrade_train_when_no_next_level(self):
         test_line_idx = 18
         wait_for_replenishment = 5
         town = self.player['town']
-        train_1 = self.player['train'][0]
-        train_2 = self.player['train'][1]
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
 
         for _ in range(len(CONFIG.TRAIN_LEVELS.keys()) - 2):
             self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
@@ -155,12 +155,12 @@ class TestUpgrade(BaseTest):
             map_data = self.get_map(1)
 
             self.assertEqual(self.get_post(town['idx'])['armor'], armor - armor_to_pay)
-            self.assertEqual(map_data['train'][0]['level'], curr_train_1['level'] + 1)
-            self.assertGreater(map_data['train'][0]['goods_capacity'], curr_train_1['goods_capacity'])
-            self.assertGreater(map_data['train'][0]['next_level_price'], curr_train_1['next_level_price'])
-            self.assertEqual(map_data['train'][1]['level'], curr_train_2['level'])
-            self.assertEqual(map_data['train'][1]['goods_capacity'], curr_train_2['goods_capacity'])
-            self.assertEqual(map_data['train'][1]['next_level_price'], curr_train_2['next_level_price'])
+            self.assertEqual(map_data['trains'][0]['level'], curr_train_1['level'] + 1)
+            self.assertGreater(map_data['trains'][0]['goods_capacity'], curr_train_1['goods_capacity'])
+            self.assertGreater(map_data['trains'][0]['next_level_price'], curr_train_1['next_level_price'])
+            self.assertEqual(map_data['trains'][1]['level'], curr_train_2['level'])
+            self.assertEqual(map_data['trains'][1]['goods_capacity'], curr_train_2['goods_capacity'])
+            self.assertEqual(map_data['trains'][1]['next_level_price'], curr_train_2['next_level_price'])
 
         # Try to upgrade train to non-existing level:
         self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
@@ -174,20 +174,20 @@ class TestUpgrade(BaseTest):
         map_data = self.get_map(1)
 
         self.assertEqual(self.get_post(town['idx'])['armor'], armor)
-        self.assertEqual(map_data['train'][0]['level'], curr_train_1['level'])
-        self.assertEqual(map_data['train'][0]['goods_capacity'], curr_train_1['goods_capacity'])
-        self.assertEqual(map_data['train'][0]['next_level_price'], curr_train_1['next_level_price'])
-        self.assertEqual(map_data['train'][1]['level'], curr_train_2['level'])
-        self.assertEqual(map_data['train'][1]['goods_capacity'], curr_train_2['goods_capacity'])
-        self.assertEqual(map_data['train'][1]['next_level_price'], curr_train_2['next_level_price'])
+        self.assertEqual(map_data['trains'][0]['level'], curr_train_1['level'])
+        self.assertEqual(map_data['trains'][0]['goods_capacity'], curr_train_1['goods_capacity'])
+        self.assertEqual(map_data['trains'][0]['next_level_price'], curr_train_1['next_level_price'])
+        self.assertEqual(map_data['trains'][1]['level'], curr_train_2['level'])
+        self.assertEqual(map_data['trains'][1]['goods_capacity'], curr_train_2['goods_capacity'])
+        self.assertEqual(map_data['trains'][1]['next_level_price'], curr_train_2['next_level_price'])
 
     def test_upgrade_town(self):
         trips = 20
         test_line_idx = 18
         wait_for_replenishment = 6
         town = self.player['town']
-        train_1 = self.player['train'][0]
-        train_2 = self.player['train'][1]
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
 
         for _ in range(trips):
             self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
@@ -216,17 +216,17 @@ class TestUpgrade(BaseTest):
             or town_now['train_cooldown'] == 0
         )
 
-        self.assertEqual(map_data['train'][0]['level'], train_1['level'])
-        self.assertEqual(map_data['train'][0]['goods_capacity'], train_1['goods_capacity'])
-        self.assertEqual(map_data['train'][0]['next_level_price'], train_1['next_level_price'])
-        self.assertEqual(map_data['train'][1]['level'], train_2['level'])
-        self.assertEqual(map_data['train'][1]['goods_capacity'], train_2['goods_capacity'])
-        self.assertEqual(map_data['train'][1]['next_level_price'], train_2['next_level_price'])
+        self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
+        self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
+        self.assertEqual(map_data['trains'][0]['next_level_price'], train_1['next_level_price'])
+        self.assertEqual(map_data['trains'][1]['level'], train_2['level'])
+        self.assertEqual(map_data['trains'][1]['goods_capacity'], train_2['goods_capacity'])
+        self.assertEqual(map_data['trains'][1]['next_level_price'], train_2['next_level_price'])
 
     def test_no_upgrade_town_when_no_enough_armor(self):
         town = self.player['town']
-        train_1 = self.player['train'][0]
-        train_2 = self.player['train'][1]
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
 
         # Check that player have no enough armor to upgrade town:
         self.assertLess(town['armor'], town['next_level_price'])
@@ -243,9 +243,9 @@ class TestUpgrade(BaseTest):
         self.assertEqual(town_now['next_level_price'], town['next_level_price'])
         self.assertEqual(town_now['train_cooldown'], town['train_cooldown'])
 
-        self.assertEqual(map_data['train'][0]['level'], train_1['level'])
-        self.assertEqual(map_data['train'][0]['goods_capacity'], train_1['goods_capacity'])
-        self.assertEqual(map_data['train'][0]['next_level_price'], train_1['next_level_price'])
-        self.assertEqual(map_data['train'][1]['level'], train_2['level'])
-        self.assertEqual(map_data['train'][1]['goods_capacity'], train_2['goods_capacity'])
-        self.assertEqual(map_data['train'][1]['next_level_price'], train_2['next_level_price'])
+        self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
+        self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
+        self.assertEqual(map_data['trains'][0]['next_level_price'], train_1['next_level_price'])
+        self.assertEqual(map_data['trains'][1]['level'], train_2['level'])
+        self.assertEqual(map_data['trains'][1]['goods_capacity'], train_2['goods_capacity'])
+        self.assertEqual(map_data['trains'][1]['next_level_price'], train_2['next_level_price'])

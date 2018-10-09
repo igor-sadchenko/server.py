@@ -100,7 +100,7 @@ class BaseTest(unittest.TestCase):
 
     def get_trains(self, **kwargs):
         map_data = self.get_map(1, **kwargs)
-        return {x['idx']: x for x in map_data['train']}
+        return {x['idx']: x for x in map_data['trains']}
 
     def get_train(self, train_idx, **kwargs):
         trains = self.get_trains(**kwargs)
@@ -109,7 +109,7 @@ class BaseTest(unittest.TestCase):
 
     def get_posts(self, **kwargs):
         map_data = self.get_map(1, **kwargs)
-        return {x['idx']: x for x in map_data['post']}
+        return {x['idx']: x for x in map_data['posts']}
 
     def get_post(self, post_idx, **kwargs):
         posts = self.get_posts(**kwargs)

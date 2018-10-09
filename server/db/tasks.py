@@ -68,7 +68,7 @@ def generate_replay(_, replay_name=None):
         for current_replay in replays_to_generate:
             replay_generator = REPLAY_GENERATORS[current_replay]
             replay_generator(database, session)
-            print("Replay '{}' has been generated.".format(current_replay))
+            print("Replay '{}' has been generated".format(current_replay))
     sys.exit(0)
 
 

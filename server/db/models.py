@@ -33,14 +33,14 @@ class Line(MapBase):
     __tablename__ = 'line'
 
     id = Column(Integer, primary_key=True)
-    len = Column(Integer)
+    length = Column(Integer)
     p0 = Column(Integer)
     p1 = Column(Integer)
     map_id = Column(Integer, ForeignKey('map.id'))
 
     def __repr__(self):
-        return "<Line(id='{}', len='{}', p0='{}', p1='{}', map_id='{}')>".format(
-           self.id, self.len, self.p0, self.p1, self.map_id)
+        return "<Line(id='{}', length='{}', p0='{}', p1='{}', map_id='{}')>".format(
+           self.id, self.length, self.p0, self.p1, self.map_id)
 
 
 class Point(MapBase):

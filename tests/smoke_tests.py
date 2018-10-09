@@ -44,17 +44,12 @@ class TestSmoke(BaseTest):
 
         self.assertIn('idx', map_data)
         self.assertIn('name', map_data)
-        self.assertIn('line', map_data)
-        self.assertIn('point', map_data)
-        self.assertNotIn('post', map_data)
-        self.assertNotIn('train', map_data)
+        self.assertIn('lines', map_data)
+        self.assertIn('points', map_data)
+        self.assertNotIn('posts', map_data)
+        self.assertNotIn('trains', map_data)
         self.assertNotIn('size', map_data)
-        self.assertNotIn('coordinate', map_data)
-
-        map02 = Map()
-        map02.from_json_str(message)
-        self.assertEqual(len(map02.line), 18)
-        self.assertEqual(len(map02.point), 12)
+        self.assertNotIn('coordinates', map_data)
 
         self.logout()
 
@@ -69,26 +64,21 @@ class TestSmoke(BaseTest):
         map_data = json.loads(message)
 
         self.assertIn('idx', map_data)
-        self.assertIn('post', map_data)
-        self.assertIn('train', map_data)
+        self.assertIn('posts', map_data)
+        self.assertIn('trains', map_data)
         self.assertNotIn('name', map_data)
-        self.assertNotIn('line', map_data)
-        self.assertNotIn('point', map_data)
+        self.assertNotIn('lines', map_data)
+        self.assertNotIn('points', map_data)
         self.assertNotIn('size', map_data)
-        self.assertNotIn('coordinate', map_data)
+        self.assertNotIn('coordinates', map_data)
 
-        posts = {x['name']: x for x in map_data['post']}
+        posts = {x['name']: x for x in map_data['posts']}
         self.assertIn('market-small', posts)
         self.assertIn('market-medium', posts)
         self.assertIn('market-big', posts)
         self.assertEqual(posts['market-small']['replenishment'], 1)
         self.assertEqual(posts['market-medium']['replenishment'], 1)
         self.assertEqual(posts['market-big']['replenishment'], 2)
-
-        map02 = Map()
-        map02.from_json_str(message)
-        self.assertEqual(len(map02.post), 6)
-        self.assertEqual(len(map02.train), CONFIG.TRAINS_COUNT)
 
         self.logout()
 
@@ -104,17 +94,12 @@ class TestSmoke(BaseTest):
 
         self.assertIn('idx', map_data)
         self.assertIn('size', map_data)
-        self.assertIn('coordinate', map_data)
-        self.assertNotIn('post', map_data)
-        self.assertNotIn('train', map_data)
+        self.assertIn('coordinates', map_data)
+        self.assertNotIn('posts', map_data)
+        self.assertNotIn('trains', map_data)
         self.assertNotIn('name', map_data)
-        self.assertNotIn('line', map_data)
-        self.assertNotIn('point', map_data)
-
-        map02 = Map()
-        map02.from_json_str(message)
-        self.assertEqual(len(map02.size), 2)
-        self.assertEqual(len(map02.coordinate), 12)
+        self.assertNotIn('lines', map_data)
+        self.assertNotIn('points', map_data)
 
         self.logout()
 
@@ -124,12 +109,12 @@ class TestSmoke(BaseTest):
         # Login for get player id.
         player = self.login()
         player_idx = player['idx']
-        train_idx = player['train'][0]['idx']
+        train_idx = player['trains'][0]['idx']
         n = 0
 
         # Check train's owner.
         train = self.get_train(train_idx)
-        self.assertEqual(train['player_id'], player_idx)
+        self.assertEqual(train['player_idx'], player_idx)
 
         # Begin moving.
         self.move_train(1 + n, train_idx, 1)
@@ -155,13 +140,13 @@ class TestSmoke(BaseTest):
         """
         player = self.login()
         player_idx = player['idx']
-        train_idx = player['train'][0]['idx']
+        train_idx = player['trains'][0]['idx']
         post_idx = player['town']['idx']
         start_product = player['town']['product']
         population = player['town']['population']
 
         train = self.get_train(train_idx)
-        self.assertEqual(train['player_id'], player_idx)
+        self.assertEqual(train['player_idx'], player_idx)
         self.assertEqual(int(train['position']), 0)
         self.assertNotEqual(int(train['goods_capacity']), 0)
         self.assertEqual(int(train['goods']), 0)

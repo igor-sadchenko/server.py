@@ -45,9 +45,9 @@ class TestErrors(BaseTest):
         non_existing_line_idx = 999999
         non_existing_train_idx = 999999
         player = self.login()
-        train_1 = player['train'][0]
-        train_2 = player['train'][1]
-        train_3 = player['train'][2]
+        train_1 = player['trains'][0]
+        train_2 = player['trains'][1]
+        train_3 = player['trains'][2]
 
         message = self.move_train(non_existing_line_idx, train_1['idx'], 1, exp_result=Result.RESOURCE_NOT_FOUND)
         self.assertIn('error', message)
