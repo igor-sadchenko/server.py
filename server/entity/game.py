@@ -78,26 +78,34 @@ class Game(Thread):
     def add_player(self, player: Player):
         """ Adds player to the game.
         """
+        # Check game state:
+        if self.state == GameState.FINISHED:
+            raise errors.AccessDenied('The game is finished')
+
+        # If player is returning to the game:
         if player.idx in self.players:
+            player.in_game = True
             return
 
-        # Check players count:
-        curr_players_count = len(self.players)
-        if curr_players_count == len(self.map.towns) or curr_players_count == self.num_players:
-            raise errors.AccessDenied('The maximum number of players reached')
-
-        if player.in_game:
-            raise errors.AccessDenied('You are logged in another game, you have to log out first')
-
+        # Add new player to the game:
         with self._lock:
+
+            # Check players count:
+            if len(self.players) == self.num_players:
+                raise errors.AccessDenied('The maximum number of players reached')
+            else:
+                # Reset the player because it can be reused:
+                player.reset()
+
+                self.players[player.idx] = player
+                player.in_game = True
+
             # Pick first available Town on the map as player's Town:
             player_town = [t for t in self.map.towns if t.player_idx is None][0]
             player_home_point = self.map.points[player_town.point_idx]
             player.set_home(player_home_point, player_town)
-            player.in_game = True
-            player.turn_called = False
-            self.players[player.idx] = player
-            # Add trains for the player:
+
+            # Create trains for the player:
             start_train_idx = len(self.trains) + 1
             for i in range(CONFIG.TRAINS_COUNT):
                 # Create Train:
@@ -108,18 +116,18 @@ class Game(Thread):
                 self.trains[train.idx] = train
                 # Put the Train into Town:
                 self.put_train_into_town(train, with_cooldown=False)
-            # Set player's rating:
-            self.map.ratings[player.idx] = {
-                'rating': player.rating,
-                'name': player.name,
-                'idx': player.idx
-            }
-            log.info('Add new player to the game, player: {}'.format(player))
+
+        # Set player's rating:
+        self.map.ratings[player.idx] = {
+            'rating': player.rating,
+            'name': player.name,
+            'idx': player.idx
+        }
+
+        log.info('Add new player to the game, player: {}'.format(player))
 
         # Start thread with game loop:
-        if not self.observed and self.num_players == len(self.players):
-            self.start()
-            self.state = GameState.RUN
+        self.start()
 
     def remove_player(self, player: Player):
         """ Removes player from the game.
@@ -141,14 +149,23 @@ class Game(Thread):
             if not self._done_tick_condition.wait(CONFIG.TURN_TIMEOUT):
                 raise errors.Timeout('Game tick did not happen')
 
-    def stop(self):
-        """ Stops ticks.
+    def start(self):
+        """ Starts game ticks (game loop).
         """
-        log.info('Game stopped, name: \'{}\''.format(self.name))
-        self.state = GameState.FINISHED
-        self._stop_event.set()
-        if self.name in Game.GAMES:
-            Game.GAMES.pop(self.name)
+        if not self.observed and self.num_players == len(self.players) and self.state == GameState.INIT:
+            log.info('Game started, name: \'{}\''.format(self.name))
+            self.state = GameState.RUN
+            super().start()
+
+    def stop(self):
+        """ Stops game ticks (game loop).
+        """
+        if self.state != GameState.FINISHED:
+            log.info('Game stopped, name: \'{}\''.format(self.name))
+            self.state = GameState.FINISHED
+            self._stop_event.set()
+            if self.name in Game.GAMES:
+                Game.GAMES.pop(self.name)
 
     def stop_if_no_players(self):
         """ Stops the game if there are no 'in_game' players.
@@ -211,7 +228,7 @@ class Game(Thread):
             msg += ", post: {!r}".format(self.map.posts[post_idx].type)
             self.train_in_post(train, self.map.posts[post_idx])
 
-        log.info(msg)
+        log.debug(msg)
 
         self.apply_next_train_move(train)
 
@@ -657,7 +674,7 @@ class Game(Thread):
         if layer not in (0, 1, 10):
             raise errors.ResourceNotFound('Map layer not found, layer: {}'.format(layer))
 
-        log.info('Load game map layer, layer: {}'.format(layer))
+        log.debug('Load game map layer, layer: {}'.format(layer))
         message = self.map.layer_to_json_str(layer)
 
         if layer == 1 and not self.observed:

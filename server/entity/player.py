@@ -39,6 +39,16 @@ class Player(Serializable):
             Player.PLAYERS[name] = player = Player(name, security_key=security_key)
         return player
 
+    def reset(self):
+        """ Resets the player if it is going to be reused.
+        """
+        self.trains = {}
+        self.home = None
+        self.town = None
+        self.turn_called = False
+        self.in_game = False
+        self.rating = 0
+
     def add_train(self, train: Train):
         """ Adds train to the player.
         """

@@ -11,7 +11,10 @@ class Action(IntEnum):
     MOVE = 3
     UPGRADE = 4
     TURN = 5
+    PLAYER = 6
     MAP = 10
+
+    # Observer actions:
     OBSERVER = 100
     GAME = 101
 

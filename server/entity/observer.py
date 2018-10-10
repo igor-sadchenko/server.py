@@ -27,7 +27,7 @@ class Observer(object):
     def games(self):
         """ Retrieves list of games.
         """
-        return self._db.get_all_games()
+        return json.dumps(self._db.get_all_games())
 
     def reset_game(self):
         """ Resets the game to initial state.
@@ -125,7 +125,7 @@ class Observer(object):
         return Result.OKEY, None
 
     def _on_observer(self, _):
-        return Result.OKEY, json.dumps(self.games())
+        return Result.OKEY, self.games()
 
     COMMAND_MAP = {
         Action.MAP: _on_get_map,

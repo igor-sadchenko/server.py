@@ -17,21 +17,26 @@ class BaseTest(unittest.TestCase):
         self.test_start = datetime.now().strftime('%H:%M:%S.%f')
         self.player_name = 'PLAYER_{}_{}'.format(self.id(), self.test_start)
         self.game_name = 'GAME_{}_{}'.format(self.id(), self.test_start)
-        self.current_tick = None
+        self.current_tick = 0
         self._connection = None
 
-    def setUp(self):
-        self.current_tick = 0
-
     def tearDown(self):
-        if self._connection is not None:
-            self._connection.close()
+        self.reset_connection()
 
     @property
     def connection(self):
         if self._connection is None:
             self._connection = ServerConnection()
         return self._connection
+
+    @connection.setter
+    def connection(self, value):
+        self._connection = value
+
+    def reset_connection(self):
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
 
     def do_action(self, action, data='', exp_result=None, is_raw=False, connection=None, **kwargs):
         connection = self.connection if connection is None else connection
@@ -199,6 +204,14 @@ class BaseTest(unittest.TestCase):
         )
         return json.loads(message) if message else None
 
+    def get_player(self, exp_result=Result.OKEY, **kwargs):
+        _, message = self.do_action(
+            Action.PLAYER,
+            exp_result=exp_result,
+            **kwargs
+        )
+        return json.loads(message) if message else None
+
     def observer(self, exp_result=Result.OKEY, **kwargs):
         _, message = self.do_action(
             Action.OBSERVER,
@@ -223,4 +236,21 @@ class BaseTest(unittest.TestCase):
             exp_result=exp_result,
             **kwargs
         )
+        return json.loads(message) if message else None
+
+    def players_turn(self, connections=(), turns_count=1, exp_result=Result.OKEY):
+        for _ in range(turns_count):
+            for conn in connections:
+                self.turn_no_resp(conn)
+            for conn in connections:
+                self.turn_check_resp(conn, exp_result=exp_result)
+            if exp_result == Result.OKEY:
+                self.current_tick += 1
+
+    def turn_no_resp(self, conn):
+        self.turn(wait_for_response=False, connection=conn, exp_result=None)
+
+    def turn_check_resp(self, conn, exp_result=Result.OKEY):
+        result, message = conn.read_response()
+        self.assertEqual(exp_result, result)
         return json.loads(message) if message else None

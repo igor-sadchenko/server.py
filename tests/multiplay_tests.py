@@ -52,21 +52,8 @@ class TestMultiplay(BaseTest):
         )
 
     def players_turn(self, players=(), turns_count=1, exp_result=Result.OKEY):
-        for _ in range(turns_count):
-            for player in players:
-                self.turn_no_resp(player)
-            for player in players:
-                self.turn_check_resp(player, exp_result=exp_result)
-            if exp_result == Result.OKEY:
-                self.current_tick += 1
-
-    def turn_no_resp(self, player):
-        self.turn(wait_for_response=False, connection=player.conn, exp_result=None)
-
-    def turn_check_resp(self, player, exp_result=Result.OKEY):
-        result, message = player.conn.read_response()
-        self.assertEqual(exp_result, result)
-        return json.loads(message) if message else None
+        connections = [p.conn for p in players]
+        return super().players_turn(connections=connections, turns_count=turns_count, exp_result=exp_result)
 
     def test_login_and_logout(self):
         """ Test login and logout.
@@ -92,10 +79,10 @@ class TestMultiplay(BaseTest):
 
         for _ in range(turns_num):
             start = time()
-            self.turn_no_resp(self.players[0])
-            self.turn_no_resp(self.players[1])
-            self.turn_check_resp(self.players[0])
-            self.turn_check_resp(self.players[1])
+            self.turn_no_resp(self.players[0].conn)
+            self.turn_no_resp(self.players[1].conn)
+            self.turn_check_resp(self.players[0].conn)
+            self.turn_check_resp(self.players[1].conn)
             elapsed = time() - start
             # Ensure that game tick has been forced by players:
             self.assertLess(elapsed, CONFIG.MAX_TICK_CALCULATION_TIME)

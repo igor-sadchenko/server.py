@@ -20,14 +20,6 @@ class TestErrors(BaseTest):
         DbMap().reset_db()
         super().tearDownClass()
 
-    def test_login(self):
-        security_key = 'you-will-never-guess'
-        wrong_security_key = 'i-will-try-to-guess'
-        self.login(security_key=security_key)
-        message = self.login(security_key=wrong_security_key, exp_result=Result.ACCESS_DENIED)
-        self.assertIn('error', message)
-        self.assertIn('Security key mismatch', message['error'])
-
     def test_get_map(self):
         non_existing_map_layer = 999999
         message = self.get_map(0, exp_result=Result.ACCESS_DENIED)
