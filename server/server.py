@@ -236,6 +236,7 @@ def run_server(_, address=CONFIG.SERVER_ADDR, port=CONFIG.SERVER_PORT, log_level
     """ Launches 'WG Forge' TCP server.
     """
     log.setLevel(log_level)
+    ThreadingTCPServer.allow_reuse_address = True
     server = ThreadingTCPServer((address, port), GameServerRequestHandler)
     log.info("Serving on {}".format(server.socket.getsockname()))
     try:

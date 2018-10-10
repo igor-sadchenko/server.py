@@ -2,10 +2,8 @@
 """
 import json
 
-from server.config import CONFIG
 from server.db.map import DbMap
 from server.defs import Action, Result
-from server.entity.map import Map
 from tests.lib.base_test import BaseTest
 
 
@@ -50,6 +48,7 @@ class TestSmoke(BaseTest):
         self.assertNotIn('trains', map_data)
         self.assertNotIn('size', map_data)
         self.assertNotIn('coordinates', map_data)
+        self.assertNotIn('ratings', map_data)
 
         self.logout()
 
@@ -66,6 +65,7 @@ class TestSmoke(BaseTest):
         self.assertIn('idx', map_data)
         self.assertIn('posts', map_data)
         self.assertIn('trains', map_data)
+        self.assertIn('ratings', map_data)
         self.assertNotIn('name', map_data)
         self.assertNotIn('lines', map_data)
         self.assertNotIn('points', map_data)
@@ -100,6 +100,7 @@ class TestSmoke(BaseTest):
         self.assertNotIn('name', map_data)
         self.assertNotIn('lines', map_data)
         self.assertNotIn('points', map_data)
+        self.assertNotIn('ratings', map_data)
 
         self.logout()
 

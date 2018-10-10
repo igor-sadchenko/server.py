@@ -59,6 +59,8 @@ class BaseConfig(object):
         EventType.REFUGEES_ARRIVAL: REFUGEES_NUMBER_RANGE[-1] * REFUGEES_COOLDOWN_COEFFICIENT,
     }
 
+    MAX_EVENT_MESSAGES = 5
+
     TOWN_LEVELS = AttrDict({
         1: {
             'population_capacity': 10,

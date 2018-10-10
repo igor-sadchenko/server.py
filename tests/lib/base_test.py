@@ -116,6 +116,9 @@ class BaseTest(unittest.TestCase):
         self.assertIn(post_idx, posts)
         return posts[post_idx]
 
+    def get_ratings(self, **kwargs):
+        return self.get_map(1, **kwargs)['ratings']
+
     def get_train_line(self, train_idx, **kwargs):
         train = self.get_train(train_idx, **kwargs)
         return train['line_idx']

@@ -54,6 +54,7 @@ class TestEntity(unittest.TestCase):
         self.assertIn('idx', data)
         self.assertNotIn('posts', data)
         self.assertNotIn('trains', data)
+        self.assertNotIn('ratings', data)
         self.assertNotIn('size', data)
         self.assertNotIn('coordinates', data)
 
@@ -67,6 +68,7 @@ class TestEntity(unittest.TestCase):
         self.assertIn('idx', data)
         self.assertIn('posts', data)
         self.assertIn('trains', data)
+        self.assertIn('ratings', data)
 
         str_json = game_map.layer_to_json_str(10)
         data = json.loads(str_json)
@@ -75,6 +77,7 @@ class TestEntity(unittest.TestCase):
         self.assertNotIn('points', data)
         self.assertNotIn('posts', data)
         self.assertNotIn('trains', data)
+        self.assertNotIn('ratings', data)
         self.assertIn('idx', data)
         self.assertIn('size', data)
         self.assertIn('coordinates', data)

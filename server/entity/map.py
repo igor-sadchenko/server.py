@@ -26,6 +26,7 @@ class Map(Serializable):
         self.coordinates = {}
         self.posts = {}
         self.trains = {}
+        self.ratings = {}
 
         # Attributes not included into json representation:
         self.use_active = use_active
@@ -84,7 +85,7 @@ class Map(Serializable):
         if layer == 0:
             attributes = ('idx', 'name', 'points', 'lines')
         elif layer == 1:
-            attributes = ('idx', 'posts', 'trains')
+            attributes = ('idx', 'posts', 'trains', 'ratings')
         elif layer == 10:
             attributes = ('idx', 'size', 'coordinates')
         return self.to_json_str(attributes=attributes)

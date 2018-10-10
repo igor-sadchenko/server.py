@@ -108,6 +108,12 @@ class Game(Thread):
                 self.trains[train.idx] = train
                 # Put the Train into Town:
                 self.put_train_into_town(train, with_cooldown=False)
+            # Set player's rating:
+            self.map.ratings[player.idx] = {
+                'rating': player.rating,
+                'name': player.name,
+                'idx': player.idx
+            }
             log.info('Add new player to the game, player: {}'.format(player))
 
         # Start thread with game loop:
@@ -142,8 +148,7 @@ class Game(Thread):
         self.state = GameState.FINISHED
         self._stop_event.set()
         if self.name in Game.GAMES:
-            # TODO: Game.GAMES.pop(self.name) -- (check it)
-            del Game.GAMES[self.name]
+            Game.GAMES.pop(self.name)
 
     def stop_if_no_players(self):
         """ Stops the game if there are no 'in_game' players.
@@ -192,6 +197,7 @@ class Game(Thread):
         self.hijackers_assault_on_tick()
         self.parasites_assault_on_tick()
         self.recalculate_ratings_on_tick()
+        self.retire_events_on_tick()
         self.stop_if_no_players()  # TODO: refactor login
 
     def train_in_point(self, train: Train, point_idx: int):
@@ -653,31 +659,18 @@ class Game(Thread):
 
         log.info('Load game map layer, layer: {}'.format(layer))
         message = self.map.layer_to_json_str(layer)
-        if layer == 1:  # Add ratings. TODO: Improve this code.
-            data = json.loads(message)
-            rating = {}
-            for _player in self.players.values():
-                rating[_player.idx] = {
-                    'rating': _player.rating,
-                    'name': _player.name,
-                    'idx': _player.idx
-                }
-            data['rating'] = rating
-            message = json.dumps(data, sort_keys=True, indent=4)
-            if not self.observed:
-                self.clean_user_events(player)
+
+        if layer == 1 and not self.observed:
+            self.clean_user_events(player)
+
         return message
 
     def clean_user_events(self, player):
-        """ Cleans all existing events.
+        """ Cleans all existing event messages for particular user.
         """
-        # TODO: leave only last 5-10 events
-        for train in self.map.trains.values():
-            if train.player_idx == player.idx:
-                train.events = []
-        for town in self.map.towns:
-            if town.player_idx == player.idx:
-                town.events = []
+        for train in player.trains.values():
+            train.events = []
+        player.town.events = []
 
     def update_cooldowns_on_tick(self):
         """ Decreases all cooldown values on game tick.
@@ -695,8 +688,18 @@ class Game(Thread):
     def recalculate_ratings_on_tick(self):
         """ Recalculates rating for all players on game tick.
         """
+        ratings = self.map.ratings
         for player in self.players.values():
             player.recalculate_rating()
+            ratings[player.idx]['rating'] = player.rating
+
+    def retire_events_on_tick(self):
+        """ Deletes old event messages and leaves only last event messages.
+        """
+        for train in self.trains.values():
+            train.events = train.events[-CONFIG.MAX_EVENT_MESSAGES:]
+        for post in self.map.posts.values():
+            post.events = post.events[-CONFIG.MAX_EVENT_MESSAGES:]
 
     def __del__(self):
         log.info('Game deleted, name: \'{}\''.format(self.name))

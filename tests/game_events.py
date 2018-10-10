@@ -119,3 +119,45 @@ class TestGameEvents(BaseTest):
             else:
                 self.assertFalse(check_event_result)
                 self.assertEqual(town['product'], max(product_before_turn - population_before_turn, 0))
+
+    def test_event_messages_count(self):
+        town_idx = self.player['town']['idx']
+        self.turn()
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 3)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 0)
+
+        self.turn(turns_count=10)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), CONFIG.MAX_EVENT_MESSAGES)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 0)
+
+        self.turn(turns_count=20)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), CONFIG.MAX_EVENT_MESSAGES)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 0)
+
+        test_line_idx = 13
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
+
+        for _ in range(3):
+            self.move_train(test_line_idx, train_1['idx'], 1)
+            self.move_train(test_line_idx, train_2['idx'], 1)
+            self.turn(turns_count=3)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), 3)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), 0)
+
+        for _ in range(6):
+            self.move_train(test_line_idx, train_1['idx'], 1)
+            self.move_train(test_line_idx, train_2['idx'], 1)
+            self.turn(turns_count=3)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), CONFIG.MAX_EVENT_MESSAGES)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), 0)
