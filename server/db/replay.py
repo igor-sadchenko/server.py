@@ -40,20 +40,20 @@ class DbReplay(object):
     def add_game(self, name, map_name, date=None, num_players=1, session=None):
         """ Creates new Game in DB.
         """
-        _date = datetime.now() if date is None else date
-        new_game = Game(name=name, date=_date, map_name=map_name, num_players=num_players)
+        created_at = datetime.now() if date is None else date
+        new_game = Game(name=name, date=created_at, map_name=map_name, num_players=num_players)
         session.add(new_game)
         session.commit()  # Commit to get game's id.
         self.current_game_id = new_game.id
         return self.current_game_id
 
     @db_session
-    def add_action(self, action, message, game_id=None, date=None, session=None):
+    def add_action(self, action, message='{}', game_id=None, date=None, session=None):
         """ Creates new Action in DB.
         """
-        _date = datetime.now() if date is None else date
-        _game_id = self.current_game_id if game_id is None else game_id
-        new_action = Action(game_id=_game_id, code=action, message=message, date=_date)
+        created_at = datetime.now() if date is None else date
+        idx = self.current_game_id if game_id is None else game_id
+        new_action = Action(game_id=idx, code=action, message=message, date=created_at)
         session.add(new_action)
 
     @db_session
@@ -64,8 +64,7 @@ class DbReplay(object):
         rows = session.query(Game, func.count(Action.id)).outerjoin(
             Action, and_(Game.id == Action.game_id, Action.code == ActionCodes.TURN)).group_by(
                 Game.id).order_by(Game.id).all()
-        for row in rows:
-            game_data, game_length = row
+        for game_data, game_length in rows:
             game = {
                 'idx': game_data.id,
                 'name': game_data.name,
@@ -82,7 +81,7 @@ class DbReplay(object):
         """ Retrieves all actions for the game.
         """
         actions = []
-        rows = session.query(Action).filter(Action.game_id == game_id).order_by(Action.id).all()
+        rows = session.query(Action).filter(Action.game_id == game_id).order_by(Action.date).all()
         for row in rows:
             action = {
                 'code': row.code,
@@ -108,7 +107,7 @@ def generate_replay01(database: DbReplay, session: ReplaySession):
             session=session
         )
         for _ in range(turns_count):
-            database.add_action(ActionCodes.TURN, None, session=session)
+            database.add_action(ActionCodes.TURN, session=session)
 
     def forward_move(line_idx: int, count_turns: int):
         """ Forward move. Inner helper to simplify records formatting.

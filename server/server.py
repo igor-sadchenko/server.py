@@ -71,9 +71,9 @@ class GameServerRequestHandler(BaseRequestHandler):
                 if self.observer:
                     self.write_response(*self.observer.action(self.action, data))
                 else:
-                    if self.action not in self.COMMAND_MAP:
+                    if self.action not in self.ACTION_MAP:
                         raise errors.BadCommand('No such action: {}'.format(self.action))
-                    method = self.COMMAND_MAP[self.action]
+                    method = self.ACTION_MAP[self.action]
                     result, message = method(self, data)
                     self.write_response(result, message)
 
@@ -233,7 +233,7 @@ class GameServerRequestHandler(BaseRequestHandler):
             message = self.observer.games()
             return Result.OKEY, message
 
-    COMMAND_MAP = {
+    ACTION_MAP = {
         Action.LOGIN: on_login,
         Action.LOGOUT: on_logout,
         Action.MAP: on_get_map,
@@ -243,7 +243,12 @@ class GameServerRequestHandler(BaseRequestHandler):
         Action.PLAYER: on_player,
         Action.OBSERVER: on_observer,
     }
-    REPLAY_ACTIONS = (Action.MOVE, Action.LOGIN, Action.UPGRADE, )
+    REPLAY_ACTIONS = (
+        Action.LOGIN,
+        Action.LOGOUT,
+        Action.MOVE,
+        Action.UPGRADE,
+    )
 
 
 @task

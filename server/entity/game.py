@@ -1,6 +1,5 @@
 """ Game entity.
 """
-import json
 import math
 import random
 from enum import IntEnum
@@ -176,8 +175,6 @@ class Game(Thread):
     def run(self):
         """ Thread's activity. The loop with game ticks.
         """
-        # Create db connection object for this thread if replay.
-        replay = DbReplay() if self.replay else None
         while not self._stop_event.is_set():
             self._start_tick_event.wait(CONFIG.TICK_TIME)
             with self._lock:
@@ -194,16 +191,14 @@ class Game(Thread):
                     player.turn_called = False
                 with self._done_tick_condition:
                     self._done_tick_condition.notify_all()
-                if replay:
-                    replay.add_action(
-                        Action.TURN, message=None, game_id=self.game_idx
-                    )
 
     def tick(self):
         """ Makes game tick. Updates dynamic game entities.
         """
         self.current_tick += 1
         log.info('Game tick, tick number: {}, game id: {}'.format(self.current_tick, self.game_idx))
+
+        # Turn steps:
         self.update_cooldowns_on_tick()  # Update cooldowns in the beginning of the tick.
         self.update_posts_on_tick()
         self.update_trains_positions_on_tick()
@@ -215,7 +210,9 @@ class Game(Thread):
         self.parasites_assault_on_tick()
         self.recalculate_ratings_on_tick()
         self.retire_events_on_tick()
-        self.stop_if_no_players()  # TODO: refactor login
+
+        if self.replay:
+            self.replay.add_action(Action.TURN)
 
     def train_in_point(self, train: Train, point_idx: int):
         """ Makes all needed actions when Train arrives to Point.
@@ -429,10 +426,10 @@ class Game(Thread):
                 player.town.population = max(player.town.population - max(hijackers_power - player.town.armor, 0), 0)
                 player.town.armor = max(player.town.armor - hijackers_power, 0)
                 player.town.events.append(event)
-            if self.replay:
-                self.replay.add_action(Action.EVENT, event.to_json_str())
             self.event_cooldowns[EventType.HIJACKERS_ASSAULT] = round(
                 hijackers_power * CONFIG.HIJACKERS_COOLDOWN_COEFFICIENT)
+            if self.replay:
+                self.replay.add_action(Action.EVENT, event.to_json_str())
 
     def parasites_assault_on_tick(self):
         """ Makes parasites assault which decreases quantity of Town's product.
@@ -449,10 +446,10 @@ class Game(Thread):
             for player in self.players.values():
                 player.town.product = max(player.town.product - parasites_power, 0)
                 player.town.events.append(event)
-            if self.replay:
-                self.replay.add_action(Action.EVENT, event.to_json_str())
             self.event_cooldowns[EventType.PARASITES_ASSAULT] = round(
                 parasites_power * CONFIG.PARASITES_COOLDOWN_COEFFICIENT)
+            if self.replay:
+                self.replay.add_action(Action.EVENT, event.to_json_str())
 
     def refugees_arrival_on_tick(self):
         """ Makes refugees arrival which increases quantity of Town's population.
@@ -475,10 +472,10 @@ class Game(Thread):
                     player.town.events.append(
                         GameEvent(EventType.RESOURCE_OVERFLOW, self.current_tick, population=player.town.population)
                     )
-            if self.replay:
-                self.replay.add_action(Action.EVENT, event.to_json_str())
             self.event_cooldowns[EventType.REFUGEES_ARRIVAL] = round(
                 refugees_number * CONFIG.REFUGEES_COOLDOWN_COEFFICIENT)
+            if self.replay:
+                self.replay.add_action(Action.EVENT, event.to_json_str())
 
     def update_posts_on_tick(self):
         """ Updates all markets and storages.
