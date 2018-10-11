@@ -37,7 +37,8 @@ class TestObserver(BaseTest):
         """ Connect as observer, get list of recorded games, verify list of games.
         """
         data = self.observer()
-        self.assertNotEqual(len(data), 0)
+        self.assertIn('games', data)
+        self.assertNotEqual(len(data['games']), 0)
 
     def test_observer_select_game(self):
         """ Select the test game, verify initial state.
@@ -50,10 +51,8 @@ class TestObserver(BaseTest):
         lines = {x['idx']: x for x in data['lines']}
         self.assertEqual(lines[1]['points'][0], 1)
         self.assertEqual(lines[1]['points'][1], 2)
-        train = self.get_train(1)
-        self.assertEqual(train['speed'], 0)
-        self.assertEqual(train['line_idx'], 1)
-        self.assertEqual(train['position'], 0)
+        trains = self.get_trains()
+        self.assertEqual(trains, {})
 
     def test_observer_set_turn(self):
         """ Set turn and check.
@@ -71,18 +70,16 @@ class TestObserver(BaseTest):
         self.assertEqual(train['position'], 2)
         self.assertEqual(train['line_idx'], 3)
         self.set_turn(0)
-        train = self.get_train(1)
-        self.assertEqual(train['speed'], 0)
-        self.assertEqual(train['position'], 0)
+        trains = self.get_trains()
+        self.assertEqual(trains, {})
         self.set_turn(100)
         train = self.get_train(1)
         self.assertEqual(train['speed'], -1)
         self.assertEqual(train['position'], 1)
         self.assertEqual(train['line_idx'], 176)
         self.set_turn(-1)
-        train = self.get_train(1)
-        self.assertEqual(train['speed'], 0)
-        self.assertEqual(train['position'], 0)
+        trains = self.get_trains()
+        self.assertEqual(trains, {})
         self.set_turn(1000)
         train = self.get_train(1)
         self.assertEqual(train['speed'], 0)
@@ -110,7 +107,7 @@ class TestObserver(BaseTest):
         self.logout(connection=user_conn)
         time.sleep(2)  # Wait for DB commit.
 
-        games = self.observer()
+        games = self.observer()['games']
         self.assertIsNotNone(games)
         my_games = [g for g in games if self.player_name in g['name']]
         self.assertEqual(len(my_games), 1)

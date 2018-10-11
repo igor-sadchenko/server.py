@@ -151,10 +151,11 @@ class Game(Thread):
     def start(self):
         """ Starts game ticks (game loop).
         """
-        if not self.observed and self.num_players == len(self.players) and self.state == GameState.INIT:
+        if self.num_players == len(self.players) and self.state == GameState.INIT:
             log.info('Game started, name: \'{}\''.format(self.name))
             self.state = GameState.RUN
-            super().start()
+            if not self.observed:
+                super().start()
 
     def stop(self):
         """ Stops game ticks (game loop).
@@ -169,7 +170,7 @@ class Game(Thread):
     def stop_if_no_players(self):
         """ Stops the game if there are no 'in_game' players.
         """
-        if not any([p.in_game for p in self.players.values()]) and self.state != GameState.FINISHED:
+        if not any([p.in_game for p in self.players.values()]):
             self.stop()
 
     def run(self):
@@ -262,7 +263,7 @@ class Game(Thread):
             if line_idx not in self.map.lines:
                 raise errors.ResourceNotFound('Line index not found, index: {}'.format(line_idx))
             train = self.trains[train_idx]
-            if not self.observed and train.player_idx != player.idx:
+            if train.player_idx != player.idx:
                 raise errors.AccessDenied('Train\'s owner mismatch')
             if train_idx in self.next_train_moves:
                 self.next_train_moves.pop(train_idx)
@@ -410,72 +411,87 @@ class Game(Thread):
             player_town = self.players[train.player_idx].town
             train.cooldown = player_town.train_cooldown
 
-    def hijackers_assault_on_tick(self):
+    def make_hijackers_assault(self, hijackers_power):
         """ Makes hijackers assault which decreases quantity of Town's armor and population.
         """
+        log.info('Hijackers assault happened, hijackers power: {}'.format(hijackers_power))
+        event = GameEvent(EventType.HIJACKERS_ASSAULT, self.current_tick, hijackers_power=hijackers_power)
+        for player in self.players.values():
+            player.town.population = max(player.town.population - max(hijackers_power - player.town.armor, 0), 0)
+            player.town.armor = max(player.town.armor - hijackers_power, 0)
+            player.town.events.append(event)
+        self.event_cooldowns[EventType.HIJACKERS_ASSAULT] = round(
+            hijackers_power * CONFIG.HIJACKERS_COOLDOWN_COEFFICIENT)
+        if self.replay:
+            self.replay.add_action(Action.EVENT, event.to_json_str())
+
+    def hijackers_assault_on_tick(self):
+        """ Makes randomly hijackers assault if it is possible.
+        """
         # Check cooldown for this Event:
-        if self.event_cooldowns.get(EventType.HIJACKERS_ASSAULT, 0) > 0:
+        if self.event_cooldowns.get(EventType.HIJACKERS_ASSAULT, 0) > 0 or self.observed:
             return
 
         rand_percent = random.randint(1, 100)
         if rand_percent <= CONFIG.HIJACKERS_ASSAULT_PROBABILITY:
             hijackers_power = random.randint(*CONFIG.HIJACKERS_POWER_RANGE)
-            log.info('Hijackers assault happened, hijackers power: {}'.format(hijackers_power))
-            event = GameEvent(EventType.HIJACKERS_ASSAULT, self.current_tick, hijackers_power=hijackers_power)
-            for player in self.players.values():
-                player.town.population = max(player.town.population - max(hijackers_power - player.town.armor, 0), 0)
-                player.town.armor = max(player.town.armor - hijackers_power, 0)
-                player.town.events.append(event)
-            self.event_cooldowns[EventType.HIJACKERS_ASSAULT] = round(
-                hijackers_power * CONFIG.HIJACKERS_COOLDOWN_COEFFICIENT)
-            if self.replay:
-                self.replay.add_action(Action.EVENT, event.to_json_str())
+            self.make_hijackers_assault(hijackers_power)
 
-    def parasites_assault_on_tick(self):
+    def make_parasites_assault(self, parasites_power):
         """ Makes parasites assault which decreases quantity of Town's product.
         """
+        log.info('Parasites assault happened, parasites power: {}'.format(parasites_power))
+        event = GameEvent(EventType.PARASITES_ASSAULT, self.current_tick, parasites_power=parasites_power)
+        for player in self.players.values():
+            player.town.product = max(player.town.product - parasites_power, 0)
+            player.town.events.append(event)
+        self.event_cooldowns[EventType.PARASITES_ASSAULT] = round(
+            parasites_power * CONFIG.PARASITES_COOLDOWN_COEFFICIENT)
+        if self.replay:
+            self.replay.add_action(Action.EVENT, event.to_json_str())
+
+    def parasites_assault_on_tick(self):
+        """ Makes randomly parasites assault if it is possible.
+        """
         # Check cooldown for this Event:
-        if self.event_cooldowns.get(EventType.PARASITES_ASSAULT, 0) > 0:
+        if self.event_cooldowns.get(EventType.PARASITES_ASSAULT, 0) > 0 or self.observed:
             return
 
         rand_percent = random.randint(1, 100)
         if rand_percent <= CONFIG.PARASITES_ASSAULT_PROBABILITY:
             parasites_power = random.randint(*CONFIG.PARASITES_POWER_RANGE)
-            log.info('Parasites assault happened, parasites power: {}'.format(parasites_power))
-            event = GameEvent(EventType.PARASITES_ASSAULT, self.current_tick, parasites_power=parasites_power)
-            for player in self.players.values():
-                player.town.product = max(player.town.product - parasites_power, 0)
-                player.town.events.append(event)
-            self.event_cooldowns[EventType.PARASITES_ASSAULT] = round(
-                parasites_power * CONFIG.PARASITES_COOLDOWN_COEFFICIENT)
-            if self.replay:
-                self.replay.add_action(Action.EVENT, event.to_json_str())
+            self.make_parasites_assault(parasites_power)
 
-    def refugees_arrival_on_tick(self):
+    def make_refugees_arrival(self, refugees_number):
         """ Makes refugees arrival which increases quantity of Town's population.
         """
+        log.info('Refugees arrival happened, refugees number: {}'.format(refugees_number))
+        event = GameEvent(EventType.REFUGEES_ARRIVAL, self.current_tick, refugees_number=refugees_number)
+        for player in self.players.values():
+            player.town.population += max(
+                min(player.town.population_capacity - player.town.population, refugees_number), 0
+            )
+            player.town.events.append(event)
+            if player.town.population == player.town.population_capacity:
+                player.town.events.append(
+                    GameEvent(EventType.RESOURCE_OVERFLOW, self.current_tick, population=player.town.population)
+                )
+        self.event_cooldowns[EventType.REFUGEES_ARRIVAL] = round(
+            refugees_number * CONFIG.REFUGEES_COOLDOWN_COEFFICIENT)
+        if self.replay:
+            self.replay.add_action(Action.EVENT, event.to_json_str())
+
+    def refugees_arrival_on_tick(self):
+        """ Makes randomly refugees arrival if it is possible.
+        """
         # Check cooldown for this Event:
-        if self.event_cooldowns.get(EventType.REFUGEES_ARRIVAL, 0) > 0:
+        if self.event_cooldowns.get(EventType.REFUGEES_ARRIVAL, 0) > 0 or self.observed:
             return
 
         rand_percent = random.randint(1, 100)
         if rand_percent <= CONFIG.REFUGEES_ARRIVAL_PROBABILITY:
             refugees_number = random.randint(*CONFIG.REFUGEES_NUMBER_RANGE)
-            log.info('Refugees arrival happened, refugees number: {}'.format(refugees_number))
-            event = GameEvent(EventType.REFUGEES_ARRIVAL, self.current_tick, refugees_number=refugees_number)
-            for player in self.players.values():
-                player.town.population += max(
-                    min(player.town.population_capacity - player.town.population, refugees_number), 0
-                )
-                player.town.events.append(event)
-                if player.town.population == player.town.population_capacity:
-                    player.town.events.append(
-                        GameEvent(EventType.RESOURCE_OVERFLOW, self.current_tick, population=player.town.population)
-                    )
-            self.event_cooldowns[EventType.REFUGEES_ARRIVAL] = round(
-                refugees_number * CONFIG.REFUGEES_COOLDOWN_COEFFICIENT)
-            if self.replay:
-                self.replay.add_action(Action.EVENT, event.to_json_str())
+            self.make_refugees_arrival(refugees_number)
 
     def update_posts_on_tick(self):
         """ Updates all markets and storages.
@@ -620,7 +636,7 @@ class Game(Thread):
                 post = self.map.posts[post_idx]
                 if post.type != PostType.TOWN:
                     raise errors.BadCommand('The post is not a Town, post: {}'.format(post))
-                if not self.observed and post.player_idx != player.idx:
+                if post.player_idx != player.idx:
                     raise errors.AccessDenied('Town\'s owner mismatch')
                 posts.append(post)
 
@@ -630,7 +646,7 @@ class Game(Thread):
                 if train_idx not in self.trains:
                     raise errors.ResourceNotFound('Train index not found, index: {}'.format(train_idx))
                 train = self.trains[train_idx]
-                if not self.observed and train.player_idx != player.idx:
+                if train.player_idx != player.idx:
                     raise errors.AccessDenied('Train\'s owner mismatch')
                 trains.append(train)
 

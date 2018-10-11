@@ -196,8 +196,8 @@ class BaseTest(unittest.TestCase):
         _, message = self.do_action(
             Action.UPGRADE,
             {
-                'post': posts,
-                'train': trains,
+                'posts': posts,
+                'trains': trains,
             },
             exp_result=exp_result,
             **kwargs

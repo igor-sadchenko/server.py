@@ -1,7 +1,6 @@
 """ Multiplay scenarios test cases.
 """
 
-import json
 from time import time
 
 from attrdict import AttrDict

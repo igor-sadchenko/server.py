@@ -8,10 +8,10 @@ from invoke import task
 import errors
 from config import CONFIG
 from defs import Action, Result
-from entity.error import Error
 from entity.game import Game
 from entity.observer import Observer
 from entity.player import Player
+from entity.serializable import Serializable
 from logger import log
 
 
@@ -53,6 +53,8 @@ class GameServerRequestHandler(BaseRequestHandler):
         log.warn('Connection from {} lost'.format(self.client_address))
         if self.game is not None and self.player is not None:
             self.game.remove_player(self.player)
+            if self.replay:
+                self.replay.add_action(Action.LOGOUT, player_idx=self.player.idx)
 
     def data_received(self, data):
         if self.data:
@@ -78,7 +80,7 @@ class GameServerRequestHandler(BaseRequestHandler):
                     self.write_response(result, message)
 
                     if self.replay and self.action in self.REPLAY_ACTIONS:
-                        self.replay.add_action(self.action, self.message)
+                        self.replay.add_action(self.action, message=self.message, player_idx=self.player.idx)
 
             # Handle errors:
             except (json.decoder.JSONDecodeError, errors.BadCommand) as err:
@@ -139,10 +141,14 @@ class GameServerRequestHandler(BaseRequestHandler):
         self.request.sendall(resp_message.encode('utf-8'))
 
     def error_response(self, result, exception=None):
-        error = Error(exception)
-        if error.error:
-            log.error(error.error)
-        response_msg = error.to_json_str()
+        if exception is not None:
+            str_exception = str(exception)
+            log.error(str_exception)
+            error = Serializable()
+            error.set_attributes(error=str_exception)
+            response_msg = error.to_json_str()
+        else:
+            response_msg = None
         self.write_response(result, response_msg)
 
     @staticmethod
@@ -216,8 +222,10 @@ class GameServerRequestHandler(BaseRequestHandler):
 
     @login_required
     def on_upgrade(self, data: dict):
-        self.check_keys(data, ['train', 'post'], agg_func=any)
-        self.game.make_upgrade(self.player, posts_idx=data.get('post', []), trains_idx=data.get('train', []))
+        self.check_keys(data, ['trains', 'posts'], agg_func=any)
+        self.game.make_upgrade(
+            self.player, posts_idx=data.get('posts', []), trains_idx=data.get('trains', [])
+        )
         return Result.OKEY, None
 
     @login_required
@@ -230,7 +238,7 @@ class GameServerRequestHandler(BaseRequestHandler):
             raise errors.BadCommand('Impossible to connect as observer')
         else:
             self.observer = Observer()
-            message = self.observer.games()
+            message = self.observer.games_to_json_str()
             return Result.OKEY, message
 
     ACTION_MAP = {

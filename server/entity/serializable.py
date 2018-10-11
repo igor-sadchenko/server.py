@@ -5,6 +5,10 @@ import json
 
 class Serializable(object):
 
+    def set_attributes(self, **kwargs):
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+
     def __repr__(self):
         return json.dumps(
             self.__dict__,

@@ -48,12 +48,12 @@ class DbReplay(object):
         return self.current_game_id
 
     @db_session
-    def add_action(self, action, message='{}', game_id=None, date=None, session=None):
+    def add_action(self, action, message='{}', game_id=None, date=None, player_idx=None, session=None):
         """ Creates new Action in DB.
         """
         created_at = datetime.now() if date is None else date
         idx = self.current_game_id if game_id is None else game_id
-        new_action = Action(game_id=idx, code=action, message=message, date=created_at)
+        new_action = Action(game_id=idx, code=action, message=message, date=created_at, player_id=player_idx)
         session.add(new_action)
 
     @db_session
@@ -77,6 +77,27 @@ class DbReplay(object):
         return games
 
     @db_session
+    def get_game(self, game_idx, session=None):
+        """ Retrieves specified game with it's length.
+        """
+        row = session.query(Game, func.count(Action.id)).filter(Game.id == game_idx).outerjoin(
+            Action, and_(Game.id == Action.game_id, Action.code == ActionCodes.TURN)).group_by(
+                Game.id).first()
+        if row:
+            game_data, game_length = row
+            game = {
+                'idx': game_data.id,
+                'name': game_data.name,
+                'date': game_data.date.strftime(TIME_FORMAT),
+                'map': game_data.map_name,
+                'length': game_length,
+                'num_players': game_data.num_players,
+            }
+            return game
+        else:
+            return None
+
+    @db_session
     def get_all_actions(self, game_id, session=None):
         """ Retrieves all actions for the game.
         """
@@ -87,6 +108,7 @@ class DbReplay(object):
                 'code': row.code,
                 'message': row.message,
                 'date': row.date.strftime(TIME_FORMAT),
+                'player_idx': row.player_id,
             }
             actions.append(action)
         return actions

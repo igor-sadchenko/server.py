@@ -120,7 +120,7 @@ class TestLogin(BaseTest):
 
     def test_disconnect_and_login_to_another_game(self):
         another_game = 'ANOTHER_GAME_NAME'
-        num_players=1
+        num_players = 1
         security_key = 'you-will-never-guess'
         wrong_security_key = 'i-will-try-to-guess'
 

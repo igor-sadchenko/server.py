@@ -107,7 +107,8 @@ class Action(ReplayBase):
     code = Column(Integer)
     message = Column(String)
     date = Column(DateTime)
+    player_id = Column(String)
 
     def __repr__(self):
-        return "<Action(id='{}', game_id='{}', code='{}', message='{}', date='{}')>".format(
-            self.id, self.game_id, self.code, self.message, self.date)
+        return "<Action(id='{}', game_id='{}', code='{}', message='{}', date='{}', player_id='{}')>".format(
+            self.id, self.game_id, self.code, self.message, self.date, self.player_id)
