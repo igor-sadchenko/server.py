@@ -2,17 +2,13 @@
 
 ## Need improvements:
 
-### Add Events to Game Replays (partially done, checks needed)
-
-* Observed Game doesn't generate random events
-* **Action.Event**. Inserts in in table ReplayDB:action
-* Game process Action Event. This Action generates by Observer
-
 ### Add more tests
 
 * Reverse train on move
+* Next train move applying
 * Fuel consumption
+* Game replaying by observer
 
-### Improve logging
+### Define finish condition for game (e.g. turn count, first game over, etc)
 
-### Review entity.observer code, bring it up to date. Add handler for upgrade?
+### Save battle results (state) to DB
