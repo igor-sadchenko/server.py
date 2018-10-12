@@ -1,4 +1,5 @@
 *.pyc
 .idea
-server/db/map.db
-server/db/replay.db
+logs/
+*.env
+NOTES
