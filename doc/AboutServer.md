@@ -21,7 +21,7 @@ enum Action
 }
 ```
 
-The **data section** follows after the action code .
+The **data section** follows after the action code.
 
 Client gets a **response message** as answer from the server. A response message starts with **result code**:
 
@@ -38,7 +38,7 @@ enum Result
 }
 ```
 
-The **data section** follows after the result code .
+The **data section** follows after the result code.
 
 **Data section** format: {data length (4 bytes)} + {bytes of UTF-8 string with data in JSON format}
 
@@ -65,12 +65,15 @@ struct ResposeMessage
 This action message has to be the first in a client-server "dialog".
 
 The server expects to receive following required values:
+
 * **name** - player's name
 
 Also following values are not required:
+
 * **password** - player's password used to verify the connection, if player with the same name tries to connect with another password - login will be rejected
 
 For multi-play game you have to define additional values:
+
 * **num_players** - number of players in the game
 * **game** - game's name
 
@@ -233,6 +236,7 @@ This action reads the game map. The game map is divided into layers:
 * Layer 10 - coordinates of points: 'idx', 'size', 'coordinates'
 
 The server expects to receive following required values:
+
 * **layer** - map's layer number
 
 #### Example: MAP request
@@ -480,13 +484,13 @@ enum PostType
 }
 ```
 
-#### Product
+### Product
 
 This type of resource (goods) is used to support the city's population. During a game turn 1 settler eats 1 product in the town.
 Product can be mined by a train in a market (on the map this object is defined as post with type of MARKET).
 Products sometimes can be stolen by parasites (see: "Parasites Invasion").
 
-#### Armor
+### Armor
 
 This type of resource (goods) is used to increase the town's defence from bandits attack (see: "Bandits Attack").
 Also armor can be used to upgrade units (see: "Upgrade"). Bandits attack decreases armor in the town (1 bandit -> -1 armor).
@@ -512,14 +516,14 @@ enum EventType
 }
 ```
 
-#### Parasites Invasion
+### Parasites Invasion
 
 This event is bound to the town.
 Parasites eat products in the town. Products decrement is equal to parasites count in the event.
 Number of parasites in one attack: [1..3].
-Safe time (turns count) after attack: 5 * <parasites number in the last attack>.
+Safe time (turns count) after attack: 5 * (parasites number in the last attack).
 
-##### Example: MAP response message (for layer 1) with event "Parasites Invasion"
+#### Example: MAP response message (for layer 1) with event "Parasites Invasion"
 
 ``` JSON
 {
@@ -549,15 +553,15 @@ Safe time (turns count) after attack: 5 * <parasites number in the last attack>.
 * **tick** - game's turn number
 * **type** - event's type
 
-#### Bandits Attack
+### Bandits Attack
 
 This event is bound to the town.
 Bandits destroy armor in the town. Armor decrement is equal to bandits count in the event.
 If amount of armor in the town is less then bandits count, than population of this town will be decreased!
 Number of bandits in one attack: [1..3].
-Safe time (turns count) after attack: 5 * <bandits number in the last attack>.
+Safe time (turns count) after attack: 5 * (bandits number in the last attack).
 
-##### Example: MAP response message (for layer 1) with event "Bandits Attack"
+#### Example: MAP response message (for layer 1) with event "Bandits Attack"
 
 ``` JSON
 {
@@ -587,14 +591,14 @@ Safe time (turns count) after attack: 5 * <bandits number in the last attack>.
 * **tick** - game's turn number
 * **type** - event's type
 
-#### Arrival of Refugees
+### Arrival of Refugees
 
 This event is bound to the town.
 Refugees increase population of the town. Population increment is equal to refugees count in the event.
 Number of refugees in one event: [1..3].
-Safe time (turns count) after event: 5 * <refugees number in the last event>.
+Safe time (turns count) after event: 5 * (refugees number in the last event).
 
-##### Example: MAP response message (for layer 1) with event "Arrival of Refugees"
+#### Example: MAP response message (for layer 1) with event "Arrival of Refugees"
 
 ``` JSON
 {
@@ -624,7 +628,7 @@ Safe time (turns count) after event: 5 * <refugees number in the last event>.
 * **tick** - game's turn number
 * **type** - event's type
 
-#### Train Crash
+### Train Crash
 
 This event is bound to the train.
 If two or more trains are on the same position/point and at the same time - this is the crash situation!
@@ -632,7 +636,7 @@ Crash can't happen in towns.
 All trains which participated in a crash will be returned to it's town and all goods in trains will be thrown away.
 Train can't be used after crash for some period of time (cooldown), this time (turns count) depends on town's level.
 
-##### Example: MAP response message (for layer 1) with event "Train Crash"
+#### Example: MAP response message (for layer 1) with event "Train Crash"
 
 ``` JSON
 {
@@ -670,7 +674,7 @@ Train can't be used after crash for some period of time (cooldown), this time (t
 Player is able to upgrade his town or train(s). All upgrades are paid by armor.
 To initiate upgrade client sends to server an UPGRADE action (this action is described above).
 
-#### Town upgrade
+### Town upgrade
 
 What does the town get as a result of upgrade? See in following table:
 
@@ -682,7 +686,7 @@ Level | Population Capacity | Product Capacity | Armor Capacity | Cooldown After
 
 Level 3 - is maximal town level.
 
-#### Train upgrade
+### Train upgrade
 
 What does the train get as a result of upgrade? See in following table:
 
@@ -705,6 +709,8 @@ Calculation formula:
 
 Where:
 
-    * <population> - current population in player's town (the value is multiplied by 1000)
-    * sum(<upgrade level cost>) - sum of armor spent for all upgrades (train(s), town) (the value is multiplied by 2)
-    * <town.product> + <town.armor> - sum of current amount of armor and product in player's town
+    <population> - current population in player's town (the value is multiplied by 1000)
+    
+    sum(<upgrade level cost>) - sum of armor spent for all upgrades (train(s), town) (the value is multiplied by 2)
+    
+    <town.product> + <town.armor> - sum of current amount of armor and product in player's town
