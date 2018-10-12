@@ -1,7 +1,7 @@
 """ Tests for train collisions.
 """
 
-from server.db.map import DbMap
+from server.db import map_db
 from server.defs import Result
 from server.entity.event import Event, EventType
 from tests.lib.base_test import BaseTest
@@ -14,11 +14,12 @@ class TestTrainCollisions(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
+        map_db.reset_db()
+        map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        DbMap().reset_db()
+        map_db.reset_db()
         super().tearDownClass()
 
     def setUp(self):

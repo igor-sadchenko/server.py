@@ -4,9 +4,9 @@
 import time
 
 from server.config import CONFIG
-from server.db.map import DbMap
-from server.db.replay import DbReplay, generate_replay01
-from server.db.session import replay_session_ctx
+from server.db import map_db
+from server.db.session import session_ctx
+from server.db.tasks import generate_replay01
 from tests.lib.base_test import BaseTest
 from tests.lib.server_connection import ServerConnection
 
@@ -18,19 +18,14 @@ class TestObserver(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        replay_db = DbReplay()
-        replay_db.reset_db()
-        with replay_session_ctx() as session:
-            generate_replay01(replay_db, session)
-
-        DbMap().generate_maps(map_names=[TestObserver.MAP_NAME, ], active_map=TestObserver.MAP_NAME)
+        map_db.reset_db()
+        with session_ctx() as session:
+            map_db.generate_maps(map_names=[TestObserver.MAP_NAME, ], active_map=TestObserver.MAP_NAME, session=session)
+            generate_replay01(session)
 
     @classmethod
     def tearDownClass(cls):
-        replay_db = DbReplay()
-        replay_db.reset_db()
-
-        DbMap().reset_db()
+        map_db.reset_db()
         super().tearDownClass()
 
     def test_observer_get_game_list(self):

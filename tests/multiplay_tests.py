@@ -6,7 +6,7 @@ from time import time
 from attrdict import AttrDict
 
 from server.config import CONFIG
-from server.db.map import DbMap
+from server.db import map_db
 from server.defs import Result
 from server.entity.event import Event, EventType
 from tests.lib.base_test import BaseTest
@@ -21,11 +21,12 @@ class TestMultiplay(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
+        map_db.reset_db()
+        map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        DbMap().reset_db()
+        map_db.reset_db()
         super().tearDownClass()
 
     def setUp(self):
@@ -42,11 +43,11 @@ class TestMultiplay(BaseTest):
             player.conn.close()
         super().tearDown()
 
-    def login(self, name=None, game=None, security_key=None, num_players=None, exp_result=Result.OKEY, **kwargs):
+    def login(self, name=None, game=None, password=None, num_players=None, exp_result=Result.OKEY, **kwargs):
         num_players = self.NUM_TOWNS if num_players is None else num_players
         game = self.game_name if game is None else game
         return super().login(
-            name=name, game=game, security_key=security_key, num_players=num_players,
+            name=name, game=game, password=password, num_players=num_players,
             exp_result=exp_result, **kwargs
         )
 

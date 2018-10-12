@@ -12,6 +12,7 @@ from entity.game import Game
 from entity.observer import Observer
 from entity.player import Player
 from entity.serializable import Serializable
+from db import game_db
 from logger import log
 
 
@@ -32,7 +33,7 @@ class GameServerRequestHandler(BaseRequestHandler):
         self.data = None
         self.player = None
         self.game = None
-        self.replay = None
+        self.game_idx = None
         self.observer = None
         self.closed = None
         super(GameServerRequestHandler, self).__init__(*args, **kwargs)
@@ -53,8 +54,8 @@ class GameServerRequestHandler(BaseRequestHandler):
         log.warn('Connection from {} lost'.format(self.client_address))
         if self.game is not None and self.player is not None:
             self.game.remove_player(self.player)
-            if self.replay:
-                self.replay.add_action(Action.LOGOUT, player_idx=self.player.idx)
+            if not self.observer:
+                game_db.add_action(self.game_idx, Action.LOGOUT, player_idx=self.player.idx)
 
     def data_received(self, data):
         if self.data:
@@ -79,8 +80,8 @@ class GameServerRequestHandler(BaseRequestHandler):
                     result, message = method(self, data)
                     self.write_response(result, message)
 
-                    if self.replay and self.action in self.REPLAY_ACTIONS:
-                        self.replay.add_action(self.action, message=self.message, player_idx=self.player.idx)
+                    if not self.observer and self.action in self.REPLAY_ACTIONS:
+                        game_db.add_action(self.game_idx, self.action, message=data, player_idx=self.player.idx)
 
             # Handle errors:
             except (json.decoder.JSONDecodeError, errors.BadCommand) as err:
@@ -174,22 +175,22 @@ class GameServerRequestHandler(BaseRequestHandler):
             game_name = 'Game of {}'.format(data['name'])
             num_players = 1
 
-        security_key = data.get('security_key', None)
-        player = Player.create(data['name'], security_key)
-        if player.security_key != security_key:
-            raise errors.AccessDenied('Security key mismatch')
+        password = data.get('password', None)
+        player = Player.get(data['name'], password=password)
+        if not player.check_password(password):
+            raise errors.AccessDenied('Password mismatch')
 
-        game = Game.create(game_name, num_players=num_players)
+        game = Game.get(game_name, num_players=num_players)
         if game.num_players != num_players:
             raise errors.BadCommand(
                 'Incorrect players number requested, game: {}, game players number: {}, '
                 'requested players number: {}'.format(game_name, game.num_players, num_players)
             )
 
-        game.add_player(player)
+        player = game.add_player(player)
         self.game = game
+        self.game_idx = game.game_idx
         self.player = player
-        self.replay = game.replay
 
         log.info('Login player: {}'.format(player))
         message = self.player.to_json_str()

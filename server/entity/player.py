@@ -3,6 +3,7 @@
 import uuid
 
 from config import CONFIG
+from db import game_db
 from entity.point import Point
 from entity.post import Post
 from entity.serializable import Serializable
@@ -11,14 +12,13 @@ from entity.train import Train
 
 class Player(Serializable):
 
-    PLAYERS = {}  # All registered players.
-    PROTECTED = ('security_key', 'turn_called', )
+    PROTECTED = ('password', 'turn_called', 'db', )
     DICT_TO_LIST = ('trains', )
 
-    def __init__(self, name, security_key=None):
-        self.idx = str(uuid.uuid4())
+    def __init__(self, name, password=None, idx=None):
+        self.idx = str(uuid.uuid4()) if idx is None else idx
         self.name = name
-        self.security_key = security_key
+        self.password = password
         self.trains = {}
         self.home = None
         self.town = None
@@ -30,24 +30,21 @@ class Player(Serializable):
         return self.idx == other.idx
 
     @staticmethod
-    def create(name, security_key=None):
+    def get(name, **kwargs):
         """ Returns instance of class Player.
         """
-        if name in Player.PLAYERS:
-            player = Player.PLAYERS[name]
+        player_data = game_db.get_player_by_name(name)
+        if player_data is None:
+            player = Player(name, **kwargs)
+            game_db.add_player(player.idx, player.name, player.password)
         else:
-            Player.PLAYERS[name] = player = Player(name, security_key=security_key)
+            player = Player(player_data.name, password=player_data.password, idx=player_data.id)
         return player
 
-    def reset(self):
-        """ Resets the player if it is going to be reused.
+    def check_password(self, password):
+        """ Checks password matching.
         """
-        self.trains = {}
-        self.home = None
-        self.town = None
-        self.turn_called = False
-        self.in_game = False
-        self.rating = 0
+        return self.password == password
 
     def add_train(self, train: Train):
         """ Adds train to the player.
@@ -64,9 +61,9 @@ class Player(Serializable):
 
     def __repr__(self):
         return (
-            '<Player(idx={}, name=\'{}\', home_point_idx={}, town_post_idx={}, '
+            '<Player(idx={}, name=\'{}\', home_point={}, town_post={}, '
             'turn_called={}, in_game={}, trains_idx=[{}])>'.format(
-                self.idx, self.name, self.home.idx, self.town.idx, self.turn_called, self.in_game,
+                self.idx, self.name, self.home, self.town, self.turn_called, self.in_game,
                 ', '.join([str(idx) for idx in self.trains]))
         )
 

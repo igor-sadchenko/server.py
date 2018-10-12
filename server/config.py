@@ -13,12 +13,16 @@ class BaseConfig(object):
     SRC_DIR = path.dirname(path.realpath(__file__))
     SERVER_ADDR = getenv('WG_FORGE_SERVER_ADDR', '127.0.0.1')
     SERVER_PORT = int(getenv('WG_FORGE_SERVER_PORT', 2000))
-    MAP_DB_URI = getenv('MAP_DB_URI', 'sqlite:///' + path.join(SRC_DIR, 'map.db'))
-    REPLAY_DB_URI = getenv('REPLAY_DB_URI', 'sqlite:///' + path.join(SRC_DIR, 'replay.db'))
-    DB_URI = {
-        'map': MAP_DB_URI,
-        'replay': REPLAY_DB_URI,
-    }
+
+    DB_USER = getenv('DB_USER', 'postgres')
+    DB_PASSWORD = getenv('DB_PASSWORD', 'password')
+    DB_HOST = getenv('DB_HOST', 'pg')
+    DB_PORT = getenv('DB_PORT', '5432')
+    DB_NAME = getenv('DB_NAME', 'wgforge')
+    PG_DATABASE_URL = 'postgresql://{user}:{password}@{hostname}:{port}/{db_name}'.format(
+        user=DB_USER, password=DB_PASSWORD, hostname=DB_HOST, port=DB_PORT, db_name=DB_NAME
+    )
+    DB_URI = getenv('DB_URI', PG_DATABASE_URL)
 
     LOG_DIR = path.join(SRC_DIR, 'logs')
     DEFAULT_LOG_FILE_NAME = 'logs'
@@ -60,6 +64,7 @@ class BaseConfig(object):
     }
 
     MAX_EVENT_MESSAGES = 5
+    TIME_FORMAT = '%b %d %Y %I:%M:%S.%f'
 
     TOWN_LEVELS = AttrDict({
         1: {
@@ -116,6 +121,7 @@ class TestingConfig(BaseConfig):
     EVENT_COOLDOWNS_ON_START = {}
     TRAIN_ALWAYS_DEVASTATED = False  # There is at least one test which awaits non-devastated train, TODO: check it
     MAX_LINE_LENGTH = 1000
+    DB_URI = getenv('DB_URI', 'postgresql://wgforge:wgforge@127.0.0.1:5432/wgforge')
 
 
 class TestingConfigWithEvents(TestingConfig):
@@ -132,8 +138,7 @@ class TestingConfigWithEvents(TestingConfig):
 class ProductionConfig(BaseConfig):
     """ Production configuration.
     """
-    SERVER_ADDR = 'wgforge-srv.wargaming.net'
-    SERVER_PORT = 443
+    pass
 
 
 SERVER_CONFIGS = {

@@ -25,5 +25,8 @@ class Event(Serializable):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def to_dict(self):
+        return self.__dict__
+
     def __repr__(self):
         return '<Event(type={}, tick={})>'.format(self.type, self.tick)

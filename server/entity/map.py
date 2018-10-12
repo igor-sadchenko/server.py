@@ -6,7 +6,7 @@ from sqlalchemy.sql.expression import true
 
 import errors
 from db.models import Map as MapModel, Line as LineModel, Point as PointModel, Post as PostModel
-from db.session import map_session_ctx
+from db.session import session_ctx
 from entity.line import Line
 from entity.point import Point
 from entity.post import Post, PostType
@@ -36,10 +36,10 @@ class Map(Serializable):
         self.towns = []
 
         if self.name is not None or self.use_active:
-            self.init_map()
+            self.init_from_db()
 
-    def init_map(self):
-        with map_session_ctx() as session:
+    def init_from_db(self):
+        with session_ctx() as session:
             if self.name:
                 _map = session.query(MapModel).filter(MapModel.name == self.name).first()
             elif self.use_active:

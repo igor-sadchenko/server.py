@@ -1,9 +1,9 @@
-""" Observer Entity. Creates when to server connects Observer-Client for watch replay(s).
+""" Observer Entity. Handles requests when client connects to server as OBSERVER to watch replay(s).
 """
-import json
 
 import errors
-from db.replay import DbReplay
+from config import CONFIG
+from db import game_db
 from defs import Action, Result
 from entity.event import EventType
 from entity.game import Game
@@ -24,11 +24,10 @@ def game_required(func):
 class Observer(object):
 
     def __init__(self):
-        self.db = DbReplay()
         self.game = None
         self.actions = []
         self.players = {}
-        self.map_name = None
+        self.map_idx = None
         self.game_name = None
         self.current_turn = 0
         self.current_action = 0
@@ -48,8 +47,21 @@ class Observer(object):
     def games_to_json_str(self):
         """ Retrieves list of games.
         """
+        games_list = []
+        for game_data, game_length in game_db.get_all_games():
+            game = {
+                'idx': game_data.id,
+                'name': game_data.name,
+                'created_at': game_data.created_at.strftime(CONFIG.TIME_FORMAT),
+                'map_idx': game_data.map_id,
+                'length': game_length,
+                'num_players': game_data.num_players,
+                'ratings': game_data.ratings,
+            }
+            games_list.append(game)
+
         games = Serializable()
-        games.set_attributes(games=self.db.get_all_games())
+        games.set_attributes(games=games_list)
         return games.to_json_str()
 
     def reset_game(self):
@@ -89,13 +101,13 @@ class Observer(object):
         for action in self.actions[self.current_action:]:
 
             self.current_action += 1
-            code = action['code']
-            message = json.loads(action['message'])
-            player_idx = action['player_idx']
+            code = action.code
+            message = action.message
+            player_idx = action.player_id
             player = self.players.get(player_idx, None)
 
             if code == Action.LOGIN:
-                player = Player(message['name'], security_key=message.get('security_key', None))
+                player = Player(message['name'], password=message.get('password', None))
                 player.idx = player_idx
                 self.players[player_idx] = player
                 self.game.add_player(player)
@@ -158,18 +170,19 @@ class Observer(object):
         self.check_keys(data, ['idx'])
 
         game_idx = data['idx']
-        game = self.db.get_game(game_idx)
+        game = game_db.get_game(game_idx)
         if game is None:
             raise errors.ResourceNotFound('Game index not found, index: {}'.format(game_idx))
 
+        game, game_length = game
         self.game = None
-        self.game_name = game['name']
-        self.num_players = game['num_players']
-        self.map_name = game['map']
-        self.actions = self.db.get_all_actions(game_idx)
-        self.max_turn = game['length']
+        self.game_name = game.name
+        self.num_players = game.num_players
+        self.map_idx = game.map_id
+        self.actions = game_db.get_all_actions(game_idx)
+        self.max_turn = game_length
         self.reset_game()
-        log.info('Observer selected game: {}'.format(game['name']))
+        log.info('Observer selected game: {}'.format(self.game_name))
 
         return Result.OKEY, None
 

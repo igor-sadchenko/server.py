@@ -2,7 +2,7 @@
 """
 
 from server.config import CONFIG
-from server.db.map import DbMap
+from server.db import map_db
 from server.defs import Result
 from tests.lib.base_test import BaseTest
 
@@ -14,11 +14,12 @@ class TestUpgrade(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
+        map_db.reset_db()
+        map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        DbMap().reset_db()
+        map_db.reset_db()
         super().tearDownClass()
 
     def setUp(self):
@@ -65,9 +66,11 @@ class TestUpgrade(BaseTest):
         # Check that player have no enough armor to upgrade train:
         self.assertLess(start_armor, armor_to_pay)
 
-        self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
-        map_data = self.get_map(1)
+        message = self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
+        self.assertIn('error', message)
+        self.assertIn('Not enough armor resource for upgrade', message['error'])
 
+        map_data = self.get_map(1)
         self.assertEqual(self.get_post(town['idx'])['armor'], start_armor)
         self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
         self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
@@ -93,9 +96,11 @@ class TestUpgrade(BaseTest):
         # Check that player have enough armor to upgrade train:
         self.assertGreaterEqual(armor, armor_to_pay)
 
-        self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
-        map_data = self.get_map(1)
+        message = self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
+        self.assertIn('error', message)
+        self.assertIn('The train is not in Town now', message['error'])
 
+        map_data = self.get_map(1)
         self.assertEqual(self.get_post(town['idx'])['armor'], armor)
         self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
         self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
@@ -121,9 +126,11 @@ class TestUpgrade(BaseTest):
         # Check that player have enough armor to upgrade train:
         self.assertGreaterEqual(armor, armor_to_pay)
 
-        self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
-        map_data = self.get_map(1)
+        message = self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
+        self.assertIn('error', message)
+        self.assertIn('The train is not in Town now', message['error'])
 
+        map_data = self.get_map(1)
         self.assertEqual(self.get_post(town['idx'])['armor'], armor)
         self.assertEqual(map_data['trains'][0]['level'], train_1['level'])
         self.assertEqual(map_data['trains'][0]['goods_capacity'], train_1['goods_capacity'])
@@ -134,15 +141,19 @@ class TestUpgrade(BaseTest):
 
     def test_no_upgrade_train_when_no_next_level(self):
         test_line_idx = 18
-        wait_for_replenishment = 5
+        wait_for_replenishment = {
+            0: 0,
+            1: 29,
+        }
         town = self.player['town']
         train_1 = self.player['trains'][0]
         train_2 = self.player['trains'][1]
 
-        for _ in range(len(CONFIG.TRAIN_LEVELS.keys()) - 2):
+        levels_count = len(CONFIG.TRAIN_LEVELS.keys())
+        for i in range(levels_count - 1):
             self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
+            self.turn(wait_for_replenishment[i])
             self.move_train_until_stop(test_line_idx, train_1['idx'], 1)
-            self.turn(wait_for_replenishment)
 
             curr_train_1 = self.get_train(train_1['idx'])
             curr_train_2 = self.get_train(train_2['idx'])
@@ -157,7 +168,10 @@ class TestUpgrade(BaseTest):
             self.assertEqual(self.get_post(town['idx'])['armor'], armor - armor_to_pay)
             self.assertEqual(map_data['trains'][0]['level'], curr_train_1['level'] + 1)
             self.assertGreater(map_data['trains'][0]['goods_capacity'], curr_train_1['goods_capacity'])
-            self.assertGreater(map_data['trains'][0]['next_level_price'], curr_train_1['next_level_price'])
+            if map_data['trains'][0]['level'] == levels_count:
+                self.assertIs(map_data['trains'][0]['next_level_price'], None)
+            else:
+                self.assertGreater(map_data['trains'][0]['next_level_price'], curr_train_1['next_level_price'])
             self.assertEqual(map_data['trains'][1]['level'], curr_train_2['level'])
             self.assertEqual(map_data['trains'][1]['goods_capacity'], curr_train_2['goods_capacity'])
             self.assertEqual(map_data['trains'][1]['next_level_price'], curr_train_2['next_level_price'])
@@ -170,9 +184,11 @@ class TestUpgrade(BaseTest):
         curr_train_2 = self.get_train(train_2['idx'])
         armor = self.get_post(town['idx'])['armor']
 
-        self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
-        map_data = self.get_map(1)
+        message = self.upgrade(trains=(train_1['idx'],), exp_result=Result.BAD_COMMAND)
+        self.assertIn('error', message)
+        self.assertIn('Not all entities requested for upgrade have next levels', message['error'])
 
+        map_data = self.get_map(1)
         self.assertEqual(self.get_post(town['idx'])['armor'], armor)
         self.assertEqual(map_data['trains'][0]['level'], curr_train_1['level'])
         self.assertEqual(map_data['trains'][0]['goods_capacity'], curr_train_1['goods_capacity'])
@@ -231,7 +247,10 @@ class TestUpgrade(BaseTest):
         # Check that player have no enough armor to upgrade town:
         self.assertLess(town['armor'], town['next_level_price'])
 
-        self.upgrade(posts=(town['idx'],), exp_result=Result.BAD_COMMAND)
+        message = self.upgrade(posts=(town['idx'],), exp_result=Result.BAD_COMMAND)
+        self.assertIn('error', message)
+        self.assertIn('Not enough armor resource for upgrade', message['error'])
+
         map_data = self.get_map(1)
         town_now = self.get_post(town['idx'])
 

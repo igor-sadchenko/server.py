@@ -1,7 +1,7 @@
 """ Tests for server errors.
 """
 
-from server.db.map import DbMap
+from server.db import map_db
 from server.defs import Result
 from tests.lib.base_test import BaseTest
 
@@ -13,11 +13,12 @@ class TestErrors(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
+        map_db.reset_db()
+        map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        DbMap().reset_db()
+        map_db.reset_db()
         super().tearDownClass()
 
     def test_get_map(self):
@@ -80,3 +81,21 @@ class TestErrors(BaseTest):
         message = self.move_train(not_connected_line_idx, train_3['idx'], 1, exp_result=Result.BAD_COMMAND)
         self.assertIn('error', message)
         self.assertIn('The train is not able to switch the current line to the next line', message['error'])
+
+    def test_upgrade(self):
+        non_existing_post_idx = 999999
+        non_town_post_idx = 5
+        non_existing_train_idx = 999999
+        self.login()
+
+        message = self.upgrade(posts=[non_existing_post_idx], exp_result=Result.RESOURCE_NOT_FOUND)
+        self.assertIn('error', message)
+        self.assertIn('Post index not found', message['error'])
+
+        message = self.upgrade(posts=[non_town_post_idx], exp_result=Result.BAD_COMMAND)
+        self.assertIn('error', message)
+        self.assertIn('The post is not a Town', message['error'])
+
+        message = self.upgrade(trains=[non_existing_train_idx], exp_result=Result.RESOURCE_NOT_FOUND)
+        self.assertIn('error', message)
+        self.assertIn('Train index not found', message['error'])

@@ -1,5 +1,5 @@
 *.pyc
 .idea
-map.db
-replay.db
 logs/
+*.env
+NOTES

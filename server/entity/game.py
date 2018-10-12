@@ -7,7 +7,7 @@ from threading import Thread, Event, Lock, Condition
 
 import errors
 from config import CONFIG
-from db.replay import DbReplay
+from db import game_db
 from defs import Action
 from entity.event import EventType, Event as GameEvent
 from entity.map import Map
@@ -44,9 +44,10 @@ class Game(Thread):
                 'Unable to create game with {} players, maximum players count is {}'.format(
                     self.num_players, len(self.map.towns))
             )
-        self.replay = None if self.observed else DbReplay()
-        self.game_idx = 0 if self.observed else self.replay.add_game(
-            name, map_name=self.map.name, num_players=num_players)
+        if self.observed:
+            self.game_idx = 0
+        else:
+            self.game_idx = game_db.add_game(name, self.map.idx, num_players=num_players)
         self.players = {}
         self.trains = {}
         self.next_train_moves = {}
@@ -58,7 +59,7 @@ class Game(Thread):
         random.seed()
 
     @staticmethod
-    def create(name, **kwargs):
+    def get(name, **kwargs):
         """ Returns instance of class Game.
         """
         if name in Game.GAMES:
@@ -83,8 +84,9 @@ class Game(Thread):
 
         # If player is returning to the game:
         if player.idx in self.players:
+            player = self.players[player.idx]
             player.in_game = True
-            return
+            return player
 
         # Add new player to the game:
         with self._lock:
@@ -93,9 +95,6 @@ class Game(Thread):
             if len(self.players) == self.num_players:
                 raise errors.AccessDenied('The maximum number of players reached')
             else:
-                # Reset the player because it can be reused:
-                player.reset()
-
                 self.players[player.idx] = player
                 player.in_game = True
 
@@ -127,6 +126,8 @@ class Game(Thread):
 
         # Start thread with game loop:
         self.start()
+
+        return player
 
     def remove_player(self, player: Player):
         """ Removes player from the game.
@@ -212,8 +213,8 @@ class Game(Thread):
         self.recalculate_ratings_on_tick()
         self.retire_events_on_tick()
 
-        if self.replay:
-            self.replay.add_action(Action.TURN)
+        if not self.observed:
+            game_db.add_action(self.game_idx, Action.TURN)
 
     def train_in_point(self, train: Train, point_idx: int):
         """ Makes all needed actions when Train arrives to Point.
@@ -422,8 +423,8 @@ class Game(Thread):
             player.town.events.append(event)
         self.event_cooldowns[EventType.HIJACKERS_ASSAULT] = round(
             hijackers_power * CONFIG.HIJACKERS_COOLDOWN_COEFFICIENT)
-        if self.replay:
-            self.replay.add_action(Action.EVENT, event.to_json_str())
+        if not self.observed:
+            game_db.add_action(self.game_idx, Action.EVENT, event.to_dict())
 
     def hijackers_assault_on_tick(self):
         """ Makes randomly hijackers assault if it is possible.
@@ -447,8 +448,8 @@ class Game(Thread):
             player.town.events.append(event)
         self.event_cooldowns[EventType.PARASITES_ASSAULT] = round(
             parasites_power * CONFIG.PARASITES_COOLDOWN_COEFFICIENT)
-        if self.replay:
-            self.replay.add_action(Action.EVENT, event.to_json_str())
+        if not self.observed:
+            game_db.add_action(self.game_idx, Action.EVENT, event.to_dict())
 
     def parasites_assault_on_tick(self):
         """ Makes randomly parasites assault if it is possible.
@@ -478,8 +479,8 @@ class Game(Thread):
                 )
         self.event_cooldowns[EventType.REFUGEES_ARRIVAL] = round(
             refugees_number * CONFIG.REFUGEES_COOLDOWN_COEFFICIENT)
-        if self.replay:
-            self.replay.add_action(Action.EVENT, event.to_json_str())
+        if not self.observed:
+            game_db.add_action(self.game_idx, Action.EVENT, event.to_dict())
 
     def refugees_arrival_on_tick(self):
         """ Makes randomly refugees arrival if it is possible.

@@ -4,7 +4,7 @@
 import json
 import unittest
 
-from server.db.map import DbMap
+from server.db import map_db
 from server.entity.map import Map
 from server.entity.player import Player
 from server.entity.point import Point
@@ -18,11 +18,12 @@ class TestEntity(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        DbMap().generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
+        map_db.reset_db()
+        map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        DbMap().reset_db()
+        map_db.reset_db()
 
     def test_map_init(self):
         """ Test create map entity.
@@ -86,7 +87,8 @@ class TestEntity(unittest.TestCase):
         """ Test create player entity.
         """
         player_name = 'Vasya'
-        player = Player.create(player_name)
+        password = 'secret'
+        player = Player.get(player_name, password=password)
         train = Train(idx=1, line_idx=1, position=0)
         point = Point(idx=1, post_idx=1)
         post = Post(idx=1, name='test-post', post_type=PostType.TOWN, point_idx=point.idx)
@@ -96,10 +98,17 @@ class TestEntity(unittest.TestCase):
 
         self.assertNotEqual(player.idx, None)
         self.assertEqual(player.name, player_name)
+        self.assertEqual(player.password, password)
         self.assertIn(train.idx, player.trains)
         self.assertEqual(player.trains[train.idx].player_idx, player.idx)
         self.assertIs(player.home, point)
         self.assertIs(player.town, post)
+        self.assertIs(player.town.player_idx, player.idx)
 
-        new_player = Player.create(player_name)
-        self.assertEqual(player.idx, new_player.idx)
+        new_player = Player.get(player_name)
+        self.assertEqual(new_player.idx, player.idx)
+        self.assertEqual(new_player.name, player.name)
+        self.assertEqual(new_player.password, player.password)
+        self.assertNotIn(train.idx, new_player.trains)
+        self.assertIs(new_player.home, None)
+        self.assertIs(new_player.town, None)

@@ -45,12 +45,12 @@ class BaseTest(unittest.TestCase):
             self.assertEqual(exp_result, result)
         return result, message
 
-    def login(self, name=None, game=None, security_key=None, num_players=None, exp_result=Result.OKEY, **kwargs):
+    def login(self, name=None, game=None, password=None, num_players=None, exp_result=Result.OKEY, **kwargs):
         message = {'name': self.player_name if name is None else name}
         if game is not None:
             message['game'] = game
-        if security_key is not None:
-            message['security_key'] = security_key
+        if password is not None:
+            message['password'] = password
         if num_players is not None:
             message['num_players'] = num_players
         _, message = self.do_action(
