@@ -134,7 +134,7 @@ For multi-play game you have to define additional values:
 }
 ```
 
-#### Some fields from LOGIN response
+Some fields from LOGIN response:
 
 * **home.idx** - home's point index on the map
 * **home.post_idx** - home's post index on the map
