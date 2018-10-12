@@ -11,8 +11,8 @@ class BaseConfig(object):
     """ Base configuration.
     """
     SRC_DIR = path.dirname(path.realpath(__file__))
-    SERVER_ADDR = getenv('WG_FORGE_SERVER_ADDR', '127.0.0.1')
-    SERVER_PORT = int(getenv('WG_FORGE_SERVER_PORT', 2000))
+    SERVER_ADDR = getenv('SERVER_ADDR', '127.0.0.1')
+    SERVER_PORT = int(getenv('SERVER_PORT', 2000))
 
     DB_USER = getenv('DB_USER', 'postgres')
     DB_PASSWORD = getenv('DB_PASSWORD', 'password')
@@ -53,7 +53,7 @@ class BaseConfig(object):
     PARASITES_POWER_RANGE = (1, 3)
     PARASITES_COOLDOWN_COEFFICIENT = 5
 
-    REFUGEES_ARRIVAL_PROBABILITY = 1
+    REFUGEES_ARRIVAL_PROBABILITY = 10
     REFUGEES_NUMBER_RANGE = (1, 3)
     REFUGEES_COOLDOWN_COEFFICIENT = 5
 
@@ -147,4 +147,4 @@ SERVER_CONFIGS = {
     'production': ProductionConfig,
 }
 
-CONFIG = SERVER_CONFIGS[getenv('WG_FORGE_SERVER_CONFIG', 'production')]
+CONFIG = SERVER_CONFIGS[getenv('SERVER_CONFIG', 'production')]
