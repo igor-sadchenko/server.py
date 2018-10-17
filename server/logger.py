@@ -164,7 +164,7 @@ class QueuedLogger(logging.Logger):
             self.is_started = False
 
 
-def get_logger(name=None, level=logging.INFO, queued=False, log_file=None, use_stream=True):
+def get_logger(name=None, level=logging.INFO, queued=False, log_file=None, use_stream=True, use_file=False):
     """ Return logger by its name or create logger if it doesn't exist.
 
     name: logger's name to get/create
@@ -173,6 +173,7 @@ def get_logger(name=None, level=logging.INFO, queued=False, log_file=None, use_s
             set False to use regular logger
     log_file: file name to log to
     use_stream: set True in order to use StreamHandler
+    use_file: set True in order to use FileHandler
     """
     if name in LOGGERS:
         return LOGGERS[name]
@@ -191,10 +192,11 @@ def get_logger(name=None, level=logging.INFO, queued=False, log_file=None, use_s
         stream_handler.setFormatter(formatter)
         logger_handlers.append(stream_handler)
 
-    log_file_name = log_file or name or CONFIG.DEFAULT_LOG_FILE_NAME
-    file_handler = logging.FileHandler(os.path.join(CONFIG.LOG_DIR, '{}.log'.format(log_file_name)))
-    file_handler.setFormatter(formatter)
-    logger_handlers.append(file_handler)
+    if use_file:
+        log_file_name = log_file or name or CONFIG.DEFAULT_LOG_FILE_NAME
+        file_handler = logging.FileHandler(os.path.join(CONFIG.LOG_DIR, '{}.log'.format(log_file_name)))
+        file_handler.setFormatter(formatter)
+        logger_handlers.append(file_handler)
 
     if queued:
         queue = Queue(-1)
