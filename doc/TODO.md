@@ -1,12 +1,8 @@
-# server.py
-
-## Need improvements:
+## Things TO DO:
 
 ### Add more tests
 
-* Reverse train on move
-* Next train move applying
-* Fuel consumption
+* Fuel consumption (train moves to the Town when fuel == 0)
 * Game replaying by observer
 
 ### Define finish condition for game (e.g. turn count, first game over, etc)

@@ -140,3 +140,53 @@ class TestLogin(BaseTest):
         self.assertEqual(player_1, player_2)
 
         self.logout()
+
+    def test_one_username_two_connections_different_games(self):
+        conn1 = ServerConnection()
+        conn2 = ServerConnection()
+        game_name_1 = 'GAME_1_{}_{}'.format(self.id(), self.test_start)
+        game_name_2 = 'GAME_2_{}_{}'.format(self.id(), self.test_start)
+
+        player1 = self.login(name=self.player_name, game=game_name_1, num_players=1, connection=conn1)
+        player2 = self.login(name=self.player_name, game=game_name_2, num_players=1, connection=conn2)
+
+        self.assertEqual(len(player1['trains']), CONFIG.TRAINS_COUNT)
+        self.assertEqual(len(player2['trains']), CONFIG.TRAINS_COUNT)
+
+        self.move_train(1, player1['trains'][0]['idx'], 1, connection=conn1)
+        self.turn(connection=conn1)
+
+        player1 = self.get_player(connection=conn1)
+        player2 = self.get_player(connection=conn2)
+
+        self.assertEqual(player1['trains'][0]['line_idx'], 1)
+        self.assertEqual(player1['trains'][0]['position'], 1)
+        self.assertEqual(player1['rating'], 3060)
+
+        self.assertEqual(player2['trains'][0]['line_idx'], 1)
+        self.assertEqual(player2['trains'][0]['position'], 0)
+        self.assertEqual(player2['rating'], 0)
+
+        conn1.close()
+        conn2.close()
+
+    def test_one_username_two_connections_one_game(self):
+        conn1 = ServerConnection()
+        conn2 = ServerConnection()
+
+        player1 = self.login(name=self.player_name, game=self.game_name, num_players=1, connection=conn1)
+        player2 = self.login(name=self.player_name, game=self.game_name, num_players=1, connection=conn2)
+
+        self.assertEqual(player1, player2)
+
+        self.move_train(1, player1['trains'][0]['idx'], 1, connection=conn1)
+        self.turn(connection=conn1)
+        self.players_turn(connections=(conn1, conn2, ))
+
+        player1 = self.get_player(connection=conn1)
+        player2 = self.get_player(connection=conn2)
+
+        self.assertEqual(player1, player2)
+
+        conn1.close()
+        conn2.close()

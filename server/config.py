@@ -121,6 +121,7 @@ class TestingConfig(BaseConfig):
     EVENT_COOLDOWNS_ON_START = {}
     TRAIN_ALWAYS_DEVASTATED = False  # There is at least one test which awaits non-devastated train, TODO: check it
     MAX_LINE_LENGTH = 1000
+    FUEL_ENABLED = True
     DB_URI = getenv('DB_URI', 'postgresql://wgforge:wgforge@127.0.0.1:5432/wgforge')
 
 
