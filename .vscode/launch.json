@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Test",
+            "name": "generate-map",
             "type": "python",
             "request": "launch",
-            "stopOnEntry": true,
+            "stopOnEntry": false,
             "pythonPath": "${config:python.pythonPath}",
-            "module": "unittest",
-            "cwd": "${workspaceRoot}",
+            "module": "invoke",
+            "cwd": "${workspaceRoot}/server",
             "env": {},
             "envFile": "${workspaceRoot}/.env",
             "debugOptions": [
@@ -20,19 +20,37 @@
                 "RedirectOutput"
             ],
             "args": [
-                "test.JsonSerialization",
-                "test.Threads"
+                "generate-map"
             ]
         },
         {
-            "name": "TestClient",
+            "name": "generate-replay",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "invoke",
+            "cwd": "${workspaceRoot}/server",
+            "env": {},
+            "envFile": "${workspaceRoot}/.env",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ],
+            "args": [
+                "generate-replay"
+            ]
+        },
+        {
+            "name": "Local Tests",
             "type": "python",
             "request": "launch",
             "stopOnEntry": false,
             "pythonPath": "${config:python.pythonPath}",
             "module": "unittest",
             "cwd": "${workspaceRoot}",
-            "env": {},
+            "env": {"pythonPath": "${workspaceRoot}"},
             "envFile": "${workspaceRoot}/.env",
             "debugOptions": [
                 "WaitOnAbnormalExit",
@@ -40,7 +58,75 @@
                 "RedirectOutput"
             ],
             "args": [
-                "test.Client"
+                "test.entity",
+                "test.replay_db_helpers"
+            ]
+        },
+        {
+            "name": "Multiplay test",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "unittest",
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "WG_FORGE_SERVER_CONFIG": "testing"
+            },
+            "envFile": "${workspaceRoot}/.env",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ],
+            "args": [
+                "test.multiplay"
+            ]
+        },
+        {
+            "name": "Multiplay Client",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "unittest",
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "WG_FORGE_SERVER_CONFIG": "testing"
+            },
+            "envFile": "${workspaceRoot}/.env",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ],
+            "args": [
+                "test.multiclient"
+            ]
+        },
+        {
+            "name": "All Server Tests",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "unittest",
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "WG_FORGE_SERVER_CONFIG": "testing"
+            },
+            "envFile": "${workspaceRoot}/.env",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ],
+            "args": [
+                "test.client",
+                "test.observer",
+                "test.train_collisions",
+                "test.upgrade",
+                "test.multiplay"
             ]
         },
         {
@@ -49,73 +135,21 @@
             "request": "launch",
             "stopOnEntry": false,
             "pythonPath": "${config:python.pythonPath}",
-            "program": "${workspaceRoot}/server/Server.py",
+            "module": "invoke",
             "cwd": "${workspaceRoot}/server",
-            "env": {},
+            "env": {
+                "WG_FORGE_SERVER_CONFIG": "testing"
+            },
             "envFile": "${workspaceRoot}/.env",
-            "debugOptions": [
-                "WaitOnAbnormalExit",
-                "WaitOnNormalExit",
-                "RedirectOutput"
-            ]
-        },
-        {
-            "name": "Python Module",
-            "type": "python",
-            "request": "launch",
-            "stopOnEntry": true,
-            "pythonPath": "${config:python.pythonPath}",
-            "module": "module.name",
-            "cwd": "${workspaceRoot}",
-            "env": {},
-            "envFile": "${workspaceRoot}/.env",
-            "debugOptions": [
-                "WaitOnAbnormalExit",
-                "WaitOnNormalExit",
-                "RedirectOutput"
-            ]
-        },
-        {
-            "name": "Integrated Terminal/Console",
-            "type": "python",
-            "request": "launch",
-            "stopOnEntry": true,
-            "pythonPath": "${config:python.pythonPath}",
-            "program": "${file}",
-            "cwd": "",
-            "console": "integratedTerminal",
-            "env": {},
-            "envFile": "${workspaceRoot}/.env",
-            "debugOptions": [
-                "WaitOnAbnormalExit",
-                "WaitOnNormalExit"
-            ]
-        },
-        {
-            "name": "External Terminal/Console",
-            "type": "python",
-            "request": "launch",
-            "stopOnEntry": true,
-            "pythonPath": "${config:python.pythonPath}",
-            "program": "${file}",
-            "cwd": "",
             "console": "externalTerminal",
-            "env": {},
-            "envFile": "${workspaceRoot}/.env",
             "debugOptions": [
                 "WaitOnAbnormalExit",
-                "WaitOnNormalExit"
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ],
+            "args": [
+                "run-server"
             ]
-        },
-        {
-            "name": "Attach (Remote Debug)",
-            "type": "python",
-            "request": "attach",
-            "localRoot": "${workspaceRoot}",
-            "remoteRoot": "${workspaceRoot}",
-            "port": 3000,
-            "secret": "my_secret",
-            "host": "localhost"
         }
     ]
 }
