@@ -8,7 +8,15 @@ from sqlalchemy.orm import sessionmaker
 
 from config import CONFIG
 
-engine = create_engine(CONFIG.DB_URI)
+engine = create_engine(
+    'postgresql://{user}:{password}@{hostname}:{port}/{db_name}'.format(
+        user=CONFIG.DB_USER,
+        password=CONFIG.DB_PASSWORD,
+        hostname=CONFIG.DB_HOST,
+        port=CONFIG.DB_PORT,
+        db_name=CONFIG.DB_NAME
+    )
+)
 Session = sessionmaker(bind=engine)
 
 
