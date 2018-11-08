@@ -1,0 +1,16 @@
+version: "2"
+services:
+  pg:
+    container_name: wgforge-pg
+    image: postgres:9.6
+    ports:
+      - "5432:5432"
+    env_file:
+        - pg.env
+  server:
+    container_name: wgforge-server
+    image: m0r0z/wgforge-server
+    ports:
+      - "2000:2000"
+    env_file:
+        - server.env

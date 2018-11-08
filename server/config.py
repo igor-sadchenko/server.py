@@ -1,6 +1,6 @@
 """ Game configurations.
 """
-from os import getenv
+from os import getenv, path
 
 from attrdict import AttrDict
 
@@ -10,11 +10,36 @@ from entity.event import EventType
 class BaseConfig(object):
     """ Base configuration.
     """
+    SRC_DIR = path.dirname(path.realpath(__file__))
+    SERVER_ADDR = getenv('SERVER_ADDR', '127.0.0.1')
+    SERVER_PORT = int(getenv('SERVER_PORT', 2000))
+
+    DB_USER = getenv('DB_USER', 'postgres')
+    DB_PASSWORD = getenv('DB_PASSWORD', 'password')
+    DB_HOST = getenv('DB_HOST', 'pg')
+    DB_PORT = getenv('DB_PORT', '5432')
+    DB_NAME = getenv('DB_NAME', 'wgforge')
+    PG_DATABASE_URL = 'postgresql://{user}:{password}@{hostname}:{port}/{db_name}'.format(
+        user=DB_USER, password=DB_PASSWORD, hostname=DB_HOST, port=DB_PORT, db_name=DB_NAME
+    )
+    DB_URI = getenv('DB_URI', PG_DATABASE_URL)
+
+    LOG_DIR = path.join(SRC_DIR, 'logs')
+    DEFAULT_LOG_FILE_NAME = 'logs'
+
+    ACTION_HEADER = 4
+    RESULT_HEADER = 4
+    MSGLEN_HEADER = 4
+    RECEIVE_CHUNK_SIZE = 1024
+
     TICK_TIME = 10
     MAX_TICK_CALCULATION_TIME = 3
     TURN_TIMEOUT = TICK_TIME + MAX_TICK_CALCULATION_TIME
-    MAP_NAME = 'WG-Forge-Game-Map'
-    CURRENT_MAP_VERSION = 'map04'
+
+    MAP_NAME = 'map04'
+    MAPS_FORMAT = 'yaml'
+    MAPS_DISCOVERY = path.join(SRC_DIR, 'maps/*.yaml')
+
     TRAINS_COUNT = 8
     FUEL_ENABLED = False
     TRAIN_ALWAYS_DEVASTATED = True
@@ -28,7 +53,7 @@ class BaseConfig(object):
     PARASITES_POWER_RANGE = (1, 3)
     PARASITES_COOLDOWN_COEFFICIENT = 5
 
-    REFUGEES_ARRIVAL_PROBABILITY = 1
+    REFUGEES_ARRIVAL_PROBABILITY = 10
     REFUGEES_NUMBER_RANGE = (1, 3)
     REFUGEES_COOLDOWN_COEFFICIENT = 5
 
@@ -37,6 +62,9 @@ class BaseConfig(object):
         EventType.HIJACKERS_ASSAULT: HIJACKERS_POWER_RANGE[-1] * HIJACKERS_COOLDOWN_COEFFICIENT,
         EventType.REFUGEES_ARRIVAL: REFUGEES_NUMBER_RANGE[-1] * REFUGEES_COOLDOWN_COEFFICIENT,
     }
+
+    MAX_EVENT_MESSAGES = 5
+    TIME_FORMAT = '%b %d %Y %I:%M:%S.%f'
 
     TOWN_LEVELS = AttrDict({
         1: {
@@ -87,13 +115,14 @@ class BaseConfig(object):
 class TestingConfig(BaseConfig):
     """ Test configuration.
     """
-    SERVER_ADDR = '127.0.0.1'
-    SERVER_PORT = 2000
     HIJACKERS_ASSAULT_PROBABILITY = 0
     PARASITES_ASSAULT_PROBABILITY = 0
     REFUGEES_ARRIVAL_PROBABILITY = 0
     EVENT_COOLDOWNS_ON_START = {}
     TRAIN_ALWAYS_DEVASTATED = False  # There is at least one test which awaits non-devastated train, TODO: check it
+    MAX_LINE_LENGTH = 1000
+    FUEL_ENABLED = True
+    DB_URI = getenv('DB_URI', 'postgresql://wgforge:wgforge@127.0.0.1:5432/wgforge')
 
 
 class TestingConfigWithEvents(TestingConfig):
@@ -110,8 +139,7 @@ class TestingConfigWithEvents(TestingConfig):
 class ProductionConfig(BaseConfig):
     """ Production configuration.
     """
-    SERVER_ADDR = 'wgforge-srv.wargaming.net'
-    SERVER_PORT = 443
+    pass
 
 
 SERVER_CONFIGS = {
@@ -120,4 +148,4 @@ SERVER_CONFIGS = {
     'production': ProductionConfig,
 }
 
-CONFIG = SERVER_CONFIGS[getenv('WG_FORGE_SERVER_CONFIG', 'production')]
+CONFIG = SERVER_CONFIGS[getenv('SERVER_CONFIG', 'production')]

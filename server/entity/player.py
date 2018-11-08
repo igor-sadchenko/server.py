@@ -1,128 +1,82 @@
 """ Entity Player.
 """
-import json
 import uuid
 
-from game_config import CONFIG
+from config import CONFIG
+from db import game_db
 from entity.point import Point
 from entity.post import Post
+from entity.serializable import Serializable
 from entity.train import Train
 
 
-class Player(object):
-    """ Player
-    * name - player name
-    * id - player id
-    * train - list of trains
-    * home - point of the home town
-    """
+class Player(Serializable):
 
-    # All registered players.
-    PLAYERS = {}
+    PROTECTED = ('password', 'turn_called', 'db', )
+    DICT_TO_LIST = ('trains', )
 
-    def __init__(self, name, security_key=None):
-        self.idx = str(uuid.uuid4())
+    def __init__(self, name, password=None, idx=None):
+        self.idx = str(uuid.uuid4()) if idx is None else idx
         self.name = name
-        self.security_key = security_key
-        self.train = {}
+        self.password = password
+        self.trains = {}
         self.home = None
         self.town = None
-        self.turn_done = False
+        self.turn_called = False
         self.in_game = False
+        self.rating = 0
 
     def __eq__(self, other):
         return self.idx == other.idx
 
     @staticmethod
-    def create(name, security_key=None):
+    def get(name, **kwargs):
         """ Returns instance of class Player.
         """
-        if name in Player.PLAYERS:
-            player = Player.PLAYERS[name]
+        player_data = game_db.get_player_by_name(name)
+        if player_data is None:
+            player = Player(name, **kwargs)
+            game_db.add_player(player.idx, player.name, player.password)
         else:
-            Player.PLAYERS[name] = player = Player(name, security_key=security_key)
+            player = Player(player_data.name, password=player_data.password, idx=player_data.id)
         return player
 
-    def add_train(self, train):
+    def check_password(self, password):
+        """ Checks password matching.
+        """
+        return self.password == password
+
+    def add_train(self, train: Train):
         """ Adds train to the player.
         """
-        train.player_id = self.idx
-        self.train[train.idx] = train
+        train.player_idx = self.idx
+        self.trains[train.idx] = train
 
     def set_home(self, point: Point, post: Post):
         """ Sets home point.
         """
-        post.player_id = self.idx
+        post.player_idx = self.idx
         self.home = point
         self.town = post
 
-    def from_json_str(self, string_data):
-        """ loads object from json string
-        """
-        data = json.loads(string_data)
-        if data.get('idx'):
-            self.idx = data['idx']
-        if data.get('name'):
-            self.name = data['name']
-        if data.get('train'):
-            self.train = {
-                t['idx']: Train(
-                    t['idx'], line_idx=t['line_idx'], position=t['position'], speed=t['speed'],
-                    player_id=t['player_id'], level=t['level'], goods=t['goods'], post_type=t['post_type']
-                )
-                for t in data['train']
-            }
-        if data.get('home'):
-            home = data['home']
-            self.home = Point(home['idx'], home['post_id'])
-        if data.get('town'):
-            town = data['town']
-            self.town = Post(
-                town['idx'], town['name'], town['type'], population=town['population'], armor=town['armor'],
-                product=town['product'], level=town['level'], player_id=town['player_id'], point_id=town['point_id']
-            )
-        if data.get('turn_done'):
-            self.turn_done = data['turn_done']
-        if data.get('in_game'):
-            self.in_game = data['in_game']
-        if data.get('security_key'):
-            self.security_key = data['security_key']
-
-    def to_json_str(self):
-        """ store object to JSON string
-        """
-        data = {}
-        protected = ('security_key', )
-        for key in self.__dict__:
-            if key in protected:
-                continue
-            attribute = self.__dict__[key]
-            if isinstance(attribute, dict):
-                data[key] = [i for i in attribute.values()]
-            else:
-                data[key] = attribute
-        return json.dumps(data, default=lambda o: o.__dict__, sort_keys=True, indent=4)
-
     def __repr__(self):
         return (
-            "<Player(idx={}, name='{}', home_point_idx={}, town_post_idx={}, "
-            "turn_done={}, in_game={}, trains_idx=[{}])>".format(
-                self.idx, self.name, self.home.idx, self.town.idx, self.turn_done, self.in_game,
-                ', '.join([str(idx) for idx in self.train]))
+            '<Player(idx={}, name=\'{}\', home_point={}, town_post={}, '
+            'turn_called={}, in_game={}, trains_idx=[{}])>'.format(
+                self.idx, self.name, self.home, self.town, self.turn_called, self.in_game,
+                ', '.join([str(idx) for idx in self.trains]))
         )
 
-    @property
-    def rating(self):
+    def recalculate_rating(self):
         """ Calculates player's rating.
         """
-        rating_value = self.town.population * 1000
-        rating_value += (self.town.product + self.town.armor)
-        sum_next_level_price = 0
-        for train in self.train.values():
+        self.rating = self.town.population * 1000
+        self.rating += (self.town.product + self.town.armor)
+        level_price_sum = 0
+        for train in self.trains.values():
             for level in range(1, train.level):
-                sum_next_level_price += CONFIG.TRAIN_LEVELS[level]['next_level_price']
+                level_price_sum += CONFIG.TRAIN_LEVELS[level]['next_level_price']
         for level in range(1, self.town.level):
-            sum_next_level_price += CONFIG.TOWN_LEVELS[level]['next_level_price']
-        rating_value += sum_next_level_price
-
-        return rating_value
+            level_price_sum += CONFIG.TOWN_LEVELS[level]['next_level_price']
+        self.rating += (level_price_sum * 2)
+        return self.rating

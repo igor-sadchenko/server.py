@@ -1,5 +1,0 @@
-{
-    "python.pythonPath": "python3",
-    "cSpell.language": "en,ru",
-    "python.autoComplete.extraPaths": [ "server" ]
-}

@@ -1,100 +1,158 @@
-""" Observer Entity. Creates when to server connects Observer-Client for watch replay(s).
+""" Observer Entity. Handles requests when client connects to server as OBSERVER to watch replay(s).
 """
-import json
 
-from db.replay import DbReplay
+import errors
+from config import CONFIG
+from db import game_db
 from defs import Action, Result
+from entity.event import EventType
 from entity.game import Game
 from entity.player import Player
+from entity.serializable import Serializable
 from logger import log
 
 
-class Observer(object):
-    """ Observer entity.
-    """
+def game_required(func):
+    def wrapped(self, *args, **kwargs):
+        if self.game is None:
+            raise errors.BadCommand('A game is not chosen')
+        else:
+            return func(self, *args, **kwargs)
+    return wrapped
 
-    PLAYER_NAME = '-=Observer=-'
+
+class Observer(object):
 
     def __init__(self):
-        self._db = DbReplay()
-        self._game = None
-        self._actions = []
-        self._map_name = None
-        self._game_name = None
-        self._current_turn = 0
-        self._current_action = 0
-        self._max_turn = 0
+        self.game = None
+        self.actions = []
+        self.players = {}
+        self.map_idx = None
+        self.game_name = None
+        self.current_turn = 0
+        self.current_action = 0
+        self.max_turn = 0
         self.num_players = 0
 
-    def games(self):
+    @staticmethod
+    def check_keys(data: dict, keys, agg_func=all):
+        if not agg_func([k in data for k in keys]):
+            raise errors.BadCommand(
+                'The command\'s payload does not contain all needed keys, '
+                'following keys are expected: {}'.format(keys)
+            )
+        else:
+            return True
+
+    def games_to_json_str(self):
         """ Retrieves list of games.
         """
-        return self._db.get_all_games()
+        games_list = []
+        for game_data, game_length in game_db.get_all_games():
+            game = {
+                'idx': game_data.id,
+                'name': game_data.name,
+                'created_at': game_data.created_at.strftime(CONFIG.TIME_FORMAT),
+                'map_idx': game_data.map_id,
+                'length': game_length,
+                'num_players': game_data.num_players,
+                'ratings': game_data.ratings,
+            }
+            games_list.append(game)
+
+        games = Serializable()
+        games.set_attributes(games=games_list)
+        return games.to_json_str()
 
     def reset_game(self):
         """ Resets the game to initial state.
         """
-        self._game = Game(self._game_name, self._map_name, num_players=self.num_players, observed=True)
-        for action in self._actions:
-            if action['code'] == Action.LOGIN:
-                data = json.loads(action['message'])
-                self._game.add_player(Player.create(data['name']))
-        self._current_turn = 0
-        self._current_action = 0
+        self.game = Game(self.game_name, observed=True, num_players=self.num_players)
+        self.players = {}
+        self.current_turn = 0
+        self.current_action = 0
 
     def action(self, action, data):
         """ Interprets observer's actions.
         """
-        if action in self.COMMAND_MAP:
-            method = self.COMMAND_MAP[action]
-            return method(self, data)
-        return Result.BAD_COMMAND, None
+        if action not in self.ACTION_MAP:
+            raise errors.BadCommand('No such action: {}'.format(action))
 
-    def _on_get_map(self, data):
-        if self._game is None:
-            return Result.RESOURCE_NOT_FOUND, None
-        if 'layer' in data:
-            player = None
-            layer = data['layer']
-            return Result.OKEY, self._game.get_map_layer(player, layer)
-        return Result.BAD_COMMAND, None
+        method = self.ACTION_MAP[action]
+        return method(self, data)
+
+    @game_required
+    def on_get_map(self, data):
+        """ Returns specified game map layer.
+        """
+        self.check_keys(data, ['layer'])
+        message = self.game.get_map_layer(None, data['layer'])
+        return Result.OKEY, message
 
     def game_turn(self, turns):
         """ Plays game turns.
         """
-        assert turns > 0
         sub_turn = 0
-        for action in self._actions[self._current_action:]:
-            self._current_action += 1
-            if action['code'] == Action.MOVE:
-                player = None
-                data = json.loads(action['message'])
-                self._game.move_train(player, data['train_idx'], data['speed'], data['line_idx'])
-            elif action['code'] == Action.TURN:
-                self._game.tick()
+        events_map = {
+            EventType.HIJACKERS_ASSAULT: (self.game.make_hijackers_assault, 'hijackers_power'),
+            EventType.PARASITES_ASSAULT: (self.game.make_parasites_assault, 'parasites_power'),
+            EventType.REFUGEES_ARRIVAL: (self.game.make_refugees_arrival, 'refugees_number'),
+        }
+        for action in self.actions[self.current_action:]:
+
+            self.current_action += 1
+            code = action.code
+            message = action.message
+            player_idx = action.player_id
+            player = self.players.get(player_idx, None)
+
+            if code == Action.LOGIN:
+                player = Player(message['name'], password=message.get('password', None))
+                player.idx = player_idx
+                self.players[player_idx] = player
+                self.game.add_player(player)
+
+            elif code == Action.MOVE:
+                self.game.move_train(
+                    player, message['train_idx'], message['speed'], message['line_idx']
+                )
+
+            elif code == Action.UPGRADE:
+                self.game.make_upgrade(
+                    player, posts_idx=message.get('posts', []), trains_idx=message.get('trains', [])
+                )
+
+            elif code == Action.TURN:
+                self.game.tick()
                 sub_turn += 1
-                self._current_turn += 1
+                self.current_turn += 1
+
+            elif code == Action.EVENT:
+                event, power_attr = events_map[message['type']]
+                event(message[power_attr])
+
+            elif code == Action.LOGOUT:
+                self.game.remove_player(player)
+
+            else:
+                log.error('Unknown action code: {}'.format(code))
+
             if sub_turn >= turns:
                 break
 
-    def _on_turn(self, data):
-        if self._game is None:
-            return Result.BAD_COMMAND, None
-        if not self._actions:
-            return Result.RESOURCE_NOT_FOUND, None
-        if 'idx' not in data:
-            return Result.BAD_COMMAND, None
+    @game_required
+    def on_turn(self, data):
+        """ Sets specified game turn.
+        """
+        self.check_keys(data, ['idx'])
 
         turn = data['idx']
-        if turn < 0:
-            turn = 0
-        elif turn > self._max_turn:
-            turn = self._max_turn
+        turn = min(max(turn, 0), self.max_turn)
 
-        if turn == self._current_turn:
+        if turn == self.current_turn:
             return Result.OKEY, None
 
-        delta_turn = turn - self._current_turn
+        delta_turn = turn - self.current_turn
         if delta_turn > 0:
             self.game_turn(delta_turn)
         elif delta_turn < 0:
@@ -102,36 +160,41 @@ class Observer(object):
             if turn > 0:
                 self.game_turn(turn)
 
-        self._current_turn = turn
+        self.current_turn = turn
 
         return Result.OKEY, None
 
-    def _on_game(self, data):
-        if 'idx' not in data:
-            return Result.BAD_COMMAND, None
-        self._game = None
-        game_id = data['idx']
-        for game in self._db.get_all_games():
-            if game['idx'] == game_id:
-                game_name = game['name']
-                self._game_name = game_name
-                self.num_players = game['num_players']
-                self._map_name = game['map']
-                log(log.INFO, "Observer selected game: {}".format(game_name))
-                self._actions = self._db.get_all_actions(game_id)
-                self.reset_game()
-                self._max_turn = game['length']
-                break
-        if self._game is None:
-            return Result.RESOURCE_NOT_FOUND, None
+    def on_game(self, data):
+        """ Chooses a game.
+        """
+        self.check_keys(data, ['idx'])
+
+        game_idx = data['idx']
+        game = game_db.get_game(game_idx)
+        if game is None:
+            raise errors.ResourceNotFound('Game index not found, index: {}'.format(game_idx))
+
+        game, game_length = game
+        self.game = None
+        self.game_name = game.name
+        self.num_players = game.num_players
+        self.map_idx = game.map_id
+        self.actions = game_db.get_all_actions(game_idx)
+        self.max_turn = game_length
+        self.reset_game()
+        log.info('Observer selected game: {}'.format(self.game_name))
+
         return Result.OKEY, None
 
-    def _on_observer(self, _):
-        return Result.OKEY, json.dumps(self.games())
+    def on_observer(self, _):
+        """ Returns list of games.
+        """
+        message = self.games_to_json_str()
+        return Result.OKEY, message
 
-    COMMAND_MAP = {
-        Action.MAP: _on_get_map,
-        Action.TURN: _on_turn,
-        Action.GAME: _on_game,
-        Action.OBSERVER: _on_observer,
+    ACTION_MAP = {
+        Action.MAP: on_get_map,
+        Action.TURN: on_turn,
+        Action.GAME: on_game,
+        Action.OBSERVER: on_observer,
     }
