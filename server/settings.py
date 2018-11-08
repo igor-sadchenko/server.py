@@ -16,11 +16,7 @@ class BaseConfig(object):
     DB_PASSWORD = getenv('DB_PASSWORD', 'password')
     DB_HOST = getenv('DB_HOST', 'pg')
     DB_PORT = getenv('DB_PORT', '5432')
-    DB_NAME = getenv('DB_NAME', 'wgforge')
-    PG_DATABASE_URL = 'postgresql://{user}:{password}@{hostname}:{port}/{db_name}'.format(
-        user=DB_USER, password=DB_PASSWORD, hostname=DB_HOST, port=DB_PORT, db_name=DB_NAME
-    )
-    DB_URI = getenv('DB_URI', PG_DATABASE_URL)
+    DB_NAME = getenv('DB_NAME', 'server_db')
 
     LOG_DIR = path.join(SRC_DIR, 'logs')
     DEFAULT_LOG_FILE_NAME = 'logs'

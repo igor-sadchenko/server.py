@@ -10,7 +10,7 @@ Prepare virtualenv and install requirements:
 
 Configure PostgreSQL DB and set necessary environment variables:
 
-    $ export DB_URI=postgresql://user:password@127.0.0.1:5432/server_db
+    $ export DB_USER=user DB_PASSWORD=password DB_HOST=127.0.0.1 DB_NAME=server_db
 
 Initialize DB and generate game map:
 
