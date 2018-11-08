@@ -55,7 +55,7 @@ class Game(Thread):
         self._lock = Lock()
         self._stop_event = Event()
         self._start_tick_event = Event()
-        self._done_tick_condition = Condition()
+        self._tick_done_condition = Condition()
         random.seed()
 
     @staticmethod
@@ -140,13 +140,13 @@ class Game(Thread):
         """
         if self.state != GameState.RUN:
             raise errors.NotReady('Game state is not \'RUN\', state: {}'.format(self.state))
-        with self._done_tick_condition:
+        with self._tick_done_condition:
             with self._lock:
                 player.turn_called = True
                 all_ready_for_turn = all([p.turn_called for p in self.players.values()])
                 if all_ready_for_turn:
                     self._start_tick_event.set()
-            if not self._done_tick_condition.wait(CONFIG.TURN_TIMEOUT):
+            if not self._tick_done_condition.wait(CONFIG.TURN_TIMEOUT):
                 raise errors.Timeout('Game tick did not happen')
 
     def start(self):
@@ -179,7 +179,7 @@ class Game(Thread):
         """
         while not self._stop_event.is_set():
             self._start_tick_event.wait(CONFIG.TICK_TIME)
-            with self._lock:
+            with self._lock and self._tick_done_condition:
                 if self.state != GameState.RUN:
                     break  # Finish game thread.
                 try:
@@ -191,8 +191,7 @@ class Game(Thread):
                     self._start_tick_event.clear()
                 for player in self.players.values():
                     player.turn_called = False
-                with self._done_tick_condition:
-                    self._done_tick_condition.notify_all()
+                self._tick_done_condition.notify_all()
 
     def tick(self):
         """ Makes game tick. Updates dynamic game entities.
