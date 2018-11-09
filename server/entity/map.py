@@ -15,7 +15,8 @@ from entity.serializable import Serializable
 
 class Map(Serializable):
 
-    DICT_TO_LIST = ('points', 'lines', 'posts', 'trains', 'coordinates')
+    DICT_TO_LIST = {'points', 'lines', 'posts', 'trains', 'coordinates'}
+    LAYERS = {0, 1, 10}
 
     def __init__(self, name=None, use_active=False):
         self.name = name
@@ -81,13 +82,13 @@ class Map(Serializable):
         self.trains[train.idx] = train
 
     def layer_to_json_str(self, layer):
-        attributes = ()
+        attributes = {}
         if layer == 0:
-            attributes = ('idx', 'name', 'points', 'lines')
+            attributes = {'idx', 'name', 'points', 'lines'}
         elif layer == 1:
-            attributes = ('idx', 'posts', 'trains', 'ratings')
+            attributes = {'idx', 'posts', 'trains', 'ratings'}
         elif layer == 10:
-            attributes = ('idx', 'size', 'coordinates')
+            attributes = {'idx', 'size', 'coordinates'}
         return self.to_json_str(attributes=attributes)
 
     def __repr__(self):

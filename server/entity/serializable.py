@@ -16,7 +16,7 @@ class Serializable(object):
         )
 
     @staticmethod
-    def default_serializer(obj, attributes=()):
+    def default_serializer(obj, attributes=None):
         obj_dict = obj.__dict__.copy()
 
         if hasattr(obj, 'PROTECTED'):
@@ -35,7 +35,7 @@ class Serializable(object):
 
         return obj_dict
 
-    def to_json_str(self, attributes=()):
+    def to_json_str(self, attributes=None):
         obj_dict = self.default_serializer(self, attributes=attributes)
         return json.dumps(
             obj_dict, sort_keys=True, indent=4,

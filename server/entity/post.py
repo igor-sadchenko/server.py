@@ -48,6 +48,9 @@ class Post(Serializable):
         next_level_price: armor amount which player have to pay to get next level (only for TOWN)
         replenishment: replenishment of the resource per game tick (for MARKET and STORAGE)
     """
+
+    PROTECTED = CONFIG.POST_HIDDEN_FIELDS
+
     def __init__(self, idx, name, post_type, population=0, armor=0, product=0,
                  replenishment=1, point_idx=None, player_idx=None, level=1):
         self.idx = idx

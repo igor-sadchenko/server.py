@@ -598,7 +598,7 @@ class Game(Thread):
                 # If train_1 and train_2 at the same Point:
                 if point_1 and point_2 and point_1.idx == point_2.idx:
                     post = None if point_1.post_idx is None else self.map.posts[point_1.post_idx]
-                    if post is not None and post.type in (PostType.TOWN, ):
+                    if post is not None and post.type in {PostType.TOWN, }:
                         continue
                     else:
                         collision_pairs.append((train_1, train_2))
@@ -684,7 +684,7 @@ class Game(Thread):
     def get_map_layer(self, player, layer):
         """ Returns specified game map layer.
         """
-        if layer not in (0, 1, 10):
+        if layer not in self.map.LAYERS or layer in CONFIG.HIDDEN_MAP_LAYERS:
             raise errors.ResourceNotFound('Map layer not found, layer: {}'.format(layer))
 
         log.debug('Load game map layer, layer: {}'.format(layer))

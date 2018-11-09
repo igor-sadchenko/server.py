@@ -12,8 +12,8 @@ from entity.train import Train
 
 class Player(Serializable):
 
-    PROTECTED = ('password', 'turn_called', 'db', )
-    DICT_TO_LIST = ('trains', )
+    PROTECTED = {'password', 'turn_called', 'db', }
+    DICT_TO_LIST = {'trains', }
 
     def __init__(self, name, password=None, idx=None):
         self.idx = str(uuid.uuid4()) if idx is None else idx
