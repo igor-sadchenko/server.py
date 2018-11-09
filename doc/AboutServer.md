@@ -4,9 +4,9 @@
 
 ### Common message format
 
-The client sends to the server some "action" messages and retrieves "response" messages.
+The client sends to the server some "action" messages and retrieves "response" messages. Byte order: **little**.
 
-An **action message** always begins from the action code. All possible action codes can be represented by enumeration (C++):
+An **action message** always begins from the action code (4 bytes). All possible action codes can be represented by enumeration (C++):
 
 ```C++
 enum Action
@@ -23,6 +23,9 @@ enum Action
 
 The **data section** follows after the action code.
 
+**Data section** format:
+**{data length (4 bytes)} + {bytes of UTF-8 string with data in JSON format}**
+
 Client gets a **response message** as answer from the server. A response message starts with **result code**:
 
 ```C++
@@ -38,9 +41,11 @@ enum Result
 }
 ```
 
-The **data section** follows after the result code.
+The **data section** of the response follows after the result code.
 
-**Data section** format: {data length (4 bytes)} + {bytes of UTF-8 string with data in JSON format}
+
+Full **client-server message** format:
+**{action (4 bytes)} + {data length (4 bytes)} + {bytes of UTF-8 string with data in JSON format}**
 
 So client-server messages can be represented by following types:
 
