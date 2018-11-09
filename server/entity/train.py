@@ -34,6 +34,9 @@ class Train(Serializable):
         events: all events happened with the Train
         cooldown: the Train is blocked for this quantity of game ticks
     """
+
+    PROTECTED = CONFIG.TRAIN_HIDDEN_FIELDS
+
     def __init__(self, idx, line_idx=None, position=None, speed=0, player_idx=None, level=1, goods=0, goods_type=None):
         self.idx = idx
         self.line_idx = line_idx

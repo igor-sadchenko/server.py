@@ -74,7 +74,7 @@ class GameServerRequestHandler(BaseRequestHandler):
                 if self.observer:
                     self.write_response(*self.observer.action(self.action, data))
                 else:
-                    if self.action not in self.ACTION_MAP:
+                    if self.action not in self.ACTION_MAP or self.action in CONFIG.HIDDEN_COMMANDS:
                         raise errors.BadCommand('No such action: {}'.format(self.action))
                     method = self.ACTION_MAP[self.action]
                     result, message = method(self, data)
