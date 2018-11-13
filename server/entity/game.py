@@ -684,7 +684,7 @@ class Game(Thread):
     def get_map_layer(self, player, layer):
         """ Returns specified game map layer.
         """
-        if layer not in self.map.LAYERS or layer in CONFIG.HIDDEN_MAP_LAYERS:
+        if layer not in self.map.LAYERS or (layer in CONFIG.HIDDEN_MAP_LAYERS and not self.observed):
             raise errors.ResourceNotFound('Map layer not found, layer: {}'.format(layer))
 
         log.debug('Load game map layer, layer: {}'.format(layer))
