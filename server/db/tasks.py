@@ -61,17 +61,19 @@ def generate_replay01(session: Session):
     """
     map_name = 'map03'
 
-    game_map = map_db.get_map_by_name(map_name, session=session)
     player_name = 'replay_test_player'
     player_idx = str(uuid.uuid4())
+    map_ = map_db.get_map_by_name(map_name, session=session)
+    map_lines = map_db.get_lines_by_map_id(map_.id, session=session)
 
     game_db.add_player(player_idx, player_name, session=session)
-    game_id = game_db.add_game('Test', game_map.id, session=session)
+    game_id = game_db.add_game('Test', map_.id, session=session)
     game_db.add_action(game_id, Action.LOGIN, {'name': player_name}, player_idx=player_idx, session=session)
 
-    def insert_replay_move_and_turns(line_idx: int, speed: int, train_idx: int, turns_count: int):
+    def insert_replay_move_and_turns(line_num: int, speed: int, train_idx: int, turns_count: int):
         """ Inserts into DB MOVE action + number of TURN actions.
         """
+        line_idx = map_lines[line_num - 1].id
         game_db.add_action(
             game_id,
             Action.MOVE,
@@ -82,10 +84,10 @@ def generate_replay01(session: Session):
         for _ in range(turns_count):
             game_db.add_action(game_id, Action.TURN, session=session)
 
-    def forward_move(line_idx: int, count_turns: int):
+    def forward_move(line_num: int, count_turns: int):
         """ Forward move. Inner helper to simplify records formatting.
         """
-        insert_replay_move_and_turns(line_idx, 1, 1, count_turns)
+        insert_replay_move_and_turns(line_num, 1, 1, count_turns)
 
     def reverse_move(line_idx: int, count_turns: int):
         """ Reverse move. Inner helper to simplify records formatting.
