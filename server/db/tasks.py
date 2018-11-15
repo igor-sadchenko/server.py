@@ -9,7 +9,7 @@ from db.session import session_ctx, Session
 from defs import Action
 from logger import log
 
-__all__ = ['generate_map', 'db_init', 'generate_replay', ]
+__all__ = ['generate_map', 'generate_all_maps', 'db_init', 'generate_replay', ]
 
 
 @task
@@ -17,6 +17,13 @@ def generate_map(_, map_name=CONFIG.MAP_NAME):
     """ Generates a map in the DB.
     """
     map_db.generate_maps(map_names=[map_name, ], active_map=map_name)
+
+
+@task
+def generate_all_maps(_, active_map=CONFIG.MAP_NAME):
+    """ Generates all maps in the DB.
+    """
+    map_db.generate_maps(active_map=active_map)
 
 
 @task
@@ -52,12 +59,14 @@ def generate_replay(_, replay_name=None):
 def generate_replay01(session: Session):
     """ Generates replay for test purposes.
     """
-    map_id = map_db.get_map_id_by_name(CONFIG.MAP_NAME, session=session)
+    map_name = 'map03'
+
+    game_map = map_db.get_map_by_name(map_name, session=session)
     player_name = 'replay_test_player'
     player_idx = str(uuid.uuid4())
 
     game_db.add_player(player_idx, player_name, session=session)
-    game_id = game_db.add_game('Test', map_id, session=session)
+    game_id = game_db.add_game('Test', game_map.id, session=session)
     game_db.add_action(game_id, Action.LOGIN, {'name': player_name}, player_idx=player_idx, session=session)
 
     def insert_replay_move_and_turns(line_idx: int, speed: int, train_idx: int, turns_count: int):

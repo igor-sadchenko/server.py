@@ -19,7 +19,8 @@ posts:
   - point: 1
     name: 'town-one'
     type: 1  # TOWN
-    population: 10
+    population: 1
+    product: 100
   - point: 7
     name: 'market-one'
     type: 2  # MARKET

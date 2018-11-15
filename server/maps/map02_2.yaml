@@ -1,4 +1,4 @@
-name: 'map02'
+name: 'map02_v2'
 size: [330, 248]  # [size_x, size_y]
 
 points:
@@ -21,32 +21,26 @@ posts:
     type: 1  # TOWN
     population: 3
     product: 60
-    armor: 3
-  - point: 3
-    name: 'town-two'
-    type: 1  # TOWN
-    population: 3
-    product: 60
-    armor: 3
+    armor: 0
   - point: 4
     name: 'market-big'
     type: 2  # MARKET
     product: 36
-    replenishment: 2
+    replenishment: 3
   - point: 5
     name: 'market-medium'
     type: 2  # MARKET
     product: 28
-    replenishment: 1
+    replenishment: 2
   - point: 7
     name: 'market-small'
     type: 2  # MARKET
-    product: 5
+    product: 4
     replenishment: 1
   - point: 6
-    name: 'storage-big'
+    name: 'storage-medium'
     type: 3  # STORAGE
-    armor: 48
+    armor: 28
     replenishment: 2
 
 lines:

@@ -113,6 +113,9 @@ def generate_maps(map_names=None, active_map=None, session=None):
         with open(maps[map_name], 'r') as f:
             m = yaml.load(f)
 
+        # Delete the map if it exist
+        session.query(Map).filter(Map.name == m['name']).delete()
+
         map_id = add_map(name=m['name'], size_x=m['size'][0], size_y=m['size'][1], session=session)
 
         points_idx = []
@@ -134,7 +137,14 @@ def generate_maps(map_names=None, active_map=None, session=None):
 
 
 @session_wrapper
-def get_map_id_by_name(map_name, session=None):
-    """ Returns map ID by it's name.
+def get_map_by_name(map_name, session=None):
+    """ Returns map by it's name.
     """
-    return session.query(Map.id).filter(Map.name == map_name).scalar()
+    return session.query(Map).filter(Map.name == map_name).scalar()
+
+
+@session_wrapper
+def get_map_by_id(map_id, session=None):
+    """ Returns map by it's ID.
+    """
+    return session.query(Map).filter(Map.id == map_id).scalar()

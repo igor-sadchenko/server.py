@@ -36,7 +36,7 @@ class Line(Base):
     length = Column(Integer)
     p0 = Column(Integer)
     p1 = Column(Integer)
-    map_id = Column(Integer, ForeignKey('maps.id'), index=True)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True)
 
     def __repr__(self):
         return "<Line(id='{}', length='{}', p0='{}', p1='{}', map_id='{}')>".format(
@@ -48,7 +48,7 @@ class Point(Base):
     __tablename__ = 'points'
 
     id = Column(Integer, primary_key=True, index=True)
-    map_id = Column(Integer, ForeignKey('maps.id'), index=True)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True)
     x = Column(Integer)
     y = Column(Integer)
     posts = relationship('Post', backref='point', lazy='dynamic')
@@ -69,8 +69,8 @@ class Post(Base):
     armor = Column(Integer)
     product = Column(Integer)
     replenishment = Column(Integer)
-    map_id = Column(Integer, ForeignKey('maps.id'), index=True)
-    point_id = Column(Integer, ForeignKey('points.id'), index=True)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True)
+    point_id = Column(Integer, ForeignKey('points.id', ondelete='CASCADE'), index=True)
 
     def __repr__(self):
         return (
