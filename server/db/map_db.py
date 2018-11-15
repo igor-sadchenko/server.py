@@ -148,3 +148,10 @@ def get_map_by_id(map_id, session=None):
     """ Returns map by it's ID.
     """
     return session.query(Map).filter(Map.id == map_id).scalar()
+
+
+@session_wrapper
+def get_lines_by_map_id(map_id, session=None):
+    """ Returns map lines by map's ID.
+    """
+    return session.query(Line).filter(Line.map_id == map_id).order_by(Line.id).all()
