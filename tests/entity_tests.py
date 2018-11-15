@@ -14,7 +14,7 @@ from server.entity.train import Train
 
 class TestEntity(unittest.TestCase):
 
-    MAP_NAME = 'map02'
+    MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):

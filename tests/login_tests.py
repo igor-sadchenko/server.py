@@ -10,7 +10,7 @@ from tests.lib.server_connection import ServerConnection
 
 class TestLogin(BaseTest):
 
-    MAP_NAME = 'map02'
+    MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):

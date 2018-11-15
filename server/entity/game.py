@@ -30,7 +30,7 @@ class Game(Thread):
 
     GAMES = {}  # All registered games.
 
-    def __init__(self, name, observed=False, num_players=1):
+    def __init__(self, name, observed=False, num_players=1, map_name=None):
         super(Game, self).__init__(name=name)
         log.info('Create game, name: \'{}\''.format(self.name))
         self.name = name
@@ -38,7 +38,7 @@ class Game(Thread):
         self.current_tick = 0
         self.observed = observed
         self.num_players = num_players
-        self.map = Map(use_active=True)
+        self.map = Map(use_active=True) if map_name is None else Map(name=map_name)
         if self.num_players > len(self.map.towns):
             raise errors.BadCommand(
                 'Unable to create game with {} players, maximum players count is {}'.format(

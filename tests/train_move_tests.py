@@ -1,15 +1,13 @@
 """ Tests for action MOVE.
 """
 
-from server.config import CONFIG
 from server.db import map_db
-from server.defs import Result
 from tests.lib.base_test import BaseTest
 
 
 class TestMove(BaseTest):
 
-    MAP_NAME = 'map02'
+    MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):

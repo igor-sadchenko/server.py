@@ -8,7 +8,7 @@ from tests.lib.base_test import BaseTest
 
 class TestErrors(BaseTest):
 
-    MAP_NAME = 'map02'
+    MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):

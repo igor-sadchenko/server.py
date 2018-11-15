@@ -3,7 +3,7 @@
 
 import errors
 from config import CONFIG
-from db import game_db
+from db import game_db, map_db
 from defs import Action, Result
 from entity.event import EventType
 from entity.game import Game
@@ -27,7 +27,7 @@ class Observer(object):
         self.game = None
         self.actions = []
         self.players = {}
-        self.map_idx = None
+        self.map_name = None
         self.game_name = None
         self.current_turn = 0
         self.current_action = 0
@@ -67,7 +67,12 @@ class Observer(object):
     def reset_game(self):
         """ Resets the game to initial state.
         """
-        self.game = Game(self.game_name, observed=True, num_players=self.num_players)
+        self.game = Game(
+            self.game_name,
+            observed=True,
+            num_players=self.num_players,
+            map_name=self.map_name
+        )
         self.players = {}
         self.current_turn = 0
         self.current_action = 0
@@ -175,10 +180,11 @@ class Observer(object):
             raise errors.ResourceNotFound('Game index not found, index: {}'.format(game_idx))
 
         game, game_length = game
+        game_map = map_db.get_map_by_id(game.map_id)
         self.game = None
         self.game_name = game.name
         self.num_players = game.num_players
-        self.map_idx = game.map_id
+        self.map_name = game_map.name
         self.actions = game_db.get_all_actions(game_idx)
         self.max_turn = game_length
         self.reset_game()

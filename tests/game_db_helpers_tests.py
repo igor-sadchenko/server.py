@@ -14,13 +14,13 @@ from server.defs import Action as ActionCodes
 
 class TestGameDb(unittest.TestCase):
 
-    MAP_NAME = 'map02'
+    MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):
         map_db.reset_db()
         map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
-        cls.map_id = map_db.get_map_id_by_name(cls.MAP_NAME)
+        cls.map_id = map_db.get_map_by_name(cls.MAP_NAME).id
 
     @classmethod
     def tearDownClass(cls):
