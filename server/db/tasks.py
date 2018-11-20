@@ -9,7 +9,7 @@ from db.session import session_ctx, Session
 from defs import Action
 from logger import log
 
-__all__ = ['generate_map', 'generate_all_maps', 'db_init', 'generate_replay', ]
+__all__ = ['activate_map', 'generate_map', 'generate_all_maps', 'db_init', 'generate_replay', ]
 
 
 @task
@@ -24,6 +24,13 @@ def generate_all_maps(_, active_map=CONFIG.MAP_NAME):
     """ Generates all maps in the DB.
     """
     map_db.generate_maps(active_map=active_map)
+
+
+@task
+def activate_map(_, map_name=CONFIG.MAP_NAME):
+    """ Activates the maps in the DB.
+    """
+    map_db.set_active_map(map_name=map_name)
 
 
 @task
