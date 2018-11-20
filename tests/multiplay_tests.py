@@ -70,7 +70,7 @@ class TestMultiplay(BaseTest):
         players_in_game = 2
 
         self.login(self.players[0].name, num_players=players_in_game, connection=self.players[0].conn)
-        self.turn(exp_result=Result.NOT_READY, connection=self.players[0].conn)
+        self.turn(exp_result=Result.BAD_COMMAND, connection=self.players[0].conn)
         self.login(self.players[1].name, num_players=players_in_game, connection=self.players[1].conn)
         start = time()
         self.turn(exp_result=Result.OKEY, connection=self.players[0].conn)  # Waiting for game tick.
@@ -121,8 +121,13 @@ class TestMultiplay(BaseTest):
     def test_move_train_owned_by_other_player(self):
         """ Test movements of train which is owned by other player.
         """
-        player0 = AttrDict(self.login(self.players[0].name, connection=self.players[0].conn))
-        player1 = AttrDict(self.login(self.players[1].name, connection=self.players[1].conn))
+        players_in_game = 2
+        player0 = AttrDict(
+            self.login(self.players[0].name, connection=self.players[0].conn, num_players=players_in_game)
+        )
+        player1 = AttrDict(
+            self.login(self.players[1].name, connection=self.players[1].conn, num_players=players_in_game)
+        )
 
         # Move my train:
         valid_line = 1

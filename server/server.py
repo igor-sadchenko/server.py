@@ -1,22 +1,24 @@
 """ Game server.
 """
 import json
+from functools import wraps
 from socketserver import ThreadingTCPServer, BaseRequestHandler
 
 from invoke import task
 
 import errors
 from config import CONFIG
+from db import game_db
 from defs import Action, Result
 from entity.game import Game
 from entity.observer import Observer
 from entity.player import Player
 from entity.serializable import Serializable
-from db import game_db
 from logger import log
 
 
 def login_required(func):
+    @wraps(func)
     def wrapped(self, *args, **kwargs):
         if self.game is None or self.player is None:
             raise errors.AccessDenied('Login required')
@@ -52,7 +54,7 @@ class GameServerRequestHandler(BaseRequestHandler):
 
     def finish(self):
         log.warn('Connection from {} lost'.format(self.client_address))
-        if self.game is not None and self.player is not None:
+        if self.game is not None and self.player is not None and self.player.in_game:
             self.game.remove_player(self.player)
             if not self.observer:
                 game_db.add_action(self.game_idx, Action.LOGOUT, player_idx=self.player.idx)

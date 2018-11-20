@@ -55,30 +55,73 @@ def add_player(idx, name, password=None, session=None):
 def get_player_by_name(name, session=None):
     """ Retrieves a Player from DB.
     """
-    return session.query(Player).filter(Player.name == name).first()
+    return session.query(
+        Player
+    ).filter(
+        Player.name == name
+    ).one_or_none()
 
 
 @session_wrapper
 def get_all_games(session=None):
     """ Retrieves all games with their length.
     """
-    return session.query(Game, func.count(Action.id)).outerjoin(
-        Action, and_(Game.id == Action.game_id, Action.code == ActionCodes.TURN.value)).group_by(
-            Game.id).order_by(Game.id).all()
+    return session.query(
+        Game,
+        func.count(Action.id),
+    ).outerjoin(
+        Action,
+        and_(
+            Game.id == Action.game_id,
+            Action.code == ActionCodes.TURN.value,
+        )
+    ).group_by(
+        Game.id
+    ).order_by(
+        Game.id
+    ).all()
 
 
 @session_wrapper
 def get_game(game_idx, session=None):
     """ Retrieves specified game with it's length.
     """
-    return session.query(Game, func.count(Action.id)).filter(Game.id == game_idx).outerjoin(
-        Action, and_(Game.id == Action.game_id, Action.code == ActionCodes.TURN.value)).group_by(
-            Game.id).first()
+    return session.query(
+        Game,
+        func.count(Action.id),
+    ).filter(
+        Game.id == game_idx
+    ).outerjoin(
+        Action,
+        and_(
+            Game.id == Action.game_id,
+            Action.code == ActionCodes.TURN.value,
+        )
+    ).group_by(
+        Game.id
+    ).one_or_none()
 
 
 @session_wrapper
 def get_all_actions(game_idx, session=None):
     """ Retrieves all actions for the game.
     """
-    return session.query(Action).filter(
-        Action.game_id == game_idx).order_by(Action.created_at, Action.id).all()
+    return session.query(
+        Action
+    ).filter(
+        Action.game_id == game_idx
+    ).order_by(
+        Action.created_at,
+        Action.id,
+    ).all()
+
+
+@session_wrapper
+def update_game_data(game_idx, data, session=None):
+    """ Creates a new Game in DB.
+    """
+    game = session.query(Game).get(game_idx)
+    if game.data:
+        game.data.update(data)
+    else:
+        game.data = data

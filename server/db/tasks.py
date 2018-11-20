@@ -28,7 +28,7 @@ def generate_all_maps(_, active_map=CONFIG.MAP_NAME):
 
 @task
 def activate_map(_, map_name=CONFIG.MAP_NAME):
-    """ Activates the maps in the DB.
+    """ Activates a map in the DB.
     """
     map_db.set_active_map(map_name=map_name)
 

@@ -85,14 +85,22 @@ def discover_maps(path):
 def set_active_map(map_name, session=None):
     """ Sets specified map as active.
     """
-    active_map = session.query(Map).filter(Map.name == map_name).first()
+    active_map = session.query(
+        Map
+    ).filter(
+        Map.name == map_name
+    ).one_or_none()
 
     if active_map is None:
         err_msg = 'Map not found: \'{}\''.format(map_name)
         log.error(err_msg)
         raise ValueError(err_msg)
 
-    session.query(Map).update({'active': False})
+    session.query(
+        Map
+    ).update(
+        {'active': False}
+    )
     active_map.active = True
     session.add(active_map)
 
@@ -114,7 +122,11 @@ def generate_maps(map_names=None, active_map=None, session=None):
             m = yaml.load(f)
 
         # Delete the map if it exist
-        session.query(Map).filter(Map.name == m['name']).delete()
+        session.query(
+            Map
+        ).filter(
+            Map.name == m['name']
+        ).delete()
 
         map_id = add_map(name=m['name'], size_x=m['size'][0], size_y=m['size'][1], session=session)
 
@@ -140,18 +152,32 @@ def generate_maps(map_names=None, active_map=None, session=None):
 def get_map_by_name(map_name, session=None):
     """ Returns map by it's name.
     """
-    return session.query(Map).filter(Map.name == map_name).scalar()
+    return session.query(
+        Map
+    ).filter(
+        Map.name == map_name
+    ).one_or_none()
 
 
 @session_wrapper
 def get_map_by_id(map_id, session=None):
     """ Returns map by it's ID.
     """
-    return session.query(Map).filter(Map.id == map_id).scalar()
+    return session.query(
+        Map
+    ).filter(
+        Map.id == map_id
+    ).one_or_none()
 
 
 @session_wrapper
 def get_lines_by_map_id(map_id, session=None):
     """ Returns map lines by map's ID.
     """
-    return session.query(Line).filter(Line.map_id == map_id).order_by(Line.id).all()
+    return session.query(
+        Line
+    ).filter(
+        Line.map_id == map_id
+    ).order_by(
+        Line.id
+    ).all()

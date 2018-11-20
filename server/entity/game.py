@@ -3,6 +3,7 @@
 import math
 import random
 from enum import IntEnum
+from functools import wraps
 from threading import Thread, Event, Lock, Condition
 
 import errors
@@ -24,6 +25,26 @@ class GameState(IntEnum):
     INIT = 1
     RUN = 2
     FINISHED = 3
+
+
+def state_required(*states):
+    def state_required_wrapper(func):
+        @wraps(func)
+        def wrapped(self, *args, **kwargs):
+            if self.state in states:
+                return func(self, *args, **kwargs)
+            else:
+                raise errors.BadCommand('Inappropriate game state')
+        return wrapped
+    return state_required_wrapper
+
+
+def with_lock(func):
+    @wraps(func)
+    def wrapped(self, *args, **kwargs):
+        with self._lock:
+            return func(self, *args, **kwargs)
+    return wrapped
 
 
 class Game(Thread):
@@ -58,6 +79,10 @@ class Game(Thread):
         self._tick_done_condition = Condition()
         random.seed()
 
+    @property
+    def is_finished(self):
+        return self.state == GameState.FINISHED
+
     @staticmethod
     def get(name, **kwargs):
         """ Returns instance of class Game.
@@ -73,15 +98,12 @@ class Game(Thread):
         """ Stops all games. Uses on server shutdown.
         """
         for game_name in list(Game.GAMES.keys()):
-            Game.GAMES.pop(game_name).stop()
+            Game.GAMES.pop(game_name).delete()
 
+    @state_required(GameState.INIT, GameState.RUN)
     def add_player(self, player: Player):
         """ Adds player to the game.
         """
-        # Check game state:
-        if self.state == GameState.FINISHED:
-            raise errors.AccessDenied('The game is finished')
-
         # If player is returning to the game:
         if player.idx in self.players:
             player = self.players[player.idx]
@@ -115,31 +137,33 @@ class Game(Thread):
                 # Put the Train into Town:
                 self.put_train_into_town(train, with_cooldown=False)
 
+            # Start thread with game loop:
+            if self.num_players == len(self.players) and self.state == GameState.INIT:
+                self.start()
+
         # Set player's rating:
         self.map.ratings[player.idx] = {
             'rating': player.rating,
             'name': player.name,
-            'idx': player.idx
+            'town': player_town.name,
+            'idx': player.idx,
         }
 
         log.info('Add new player to the game, player: {}'.format(player))
 
-        # Start thread with game loop:
-        self.start()
-
         return player
 
+    @state_required(GameState.INIT, GameState.RUN)
     def remove_player(self, player: Player):
         """ Removes player from the game.
         """
         player.in_game = False
-        self.stop_if_no_players()
+        self.delete_if_no_players()
 
+    @state_required(GameState.RUN)
     def turn(self, player: Player):
         """ Makes next turn.
         """
-        if self.state != GameState.RUN:
-            raise errors.NotReady('Game state is not \'RUN\', state: {}'.format(self.state))
         with self._tick_done_condition:
             with self._lock:
                 player.turn_called = True
@@ -152,27 +176,34 @@ class Game(Thread):
     def start(self):
         """ Starts game ticks (game loop).
         """
-        if self.num_players == len(self.players) and self.state == GameState.INIT:
-            log.info('Game started, name: \'{}\''.format(self.name))
-            self.state = GameState.RUN
-            if not self.observed:
-                super().start()
+        log.info('Game started, name: \'{}\''.format(self.name))
+        self.state = GameState.RUN
+        if not self.observed:
+            super().start()
 
-    def stop(self):
+    def finish(self):
         """ Stops game ticks (game loop).
         """
-        if self.state != GameState.FINISHED:
-            log.info('Game stopped, name: \'{}\''.format(self.name))
-            self.state = GameState.FINISHED
-            self._stop_event.set()
-            if self.name in Game.GAMES:
-                Game.GAMES.pop(self.name)
+        log.info('Game finished, name: \'{}\''.format(self.name))
+        self.state = GameState.FINISHED
+        self._stop_event.set()
+        if not self.observed:
+            game_db.update_game_data(self.game_idx, self.map.ratings)
 
-    def stop_if_no_players(self):
+    def delete(self):
+        """ Stops and deletes the game.
+        """
+        if not self.is_finished:
+            self.finish()
+        if self.name in Game.GAMES:
+            Game.GAMES.pop(self.name)
+
+    def delete_if_no_players(self):
         """ Stops the game if there are no 'in_game' players.
         """
-        if not any([p.in_game for p in self.players.values()]):
-            self.stop()
+        with self._lock:
+            if not any([p.in_game for p in self.players.values()]):
+                self.delete()
 
     def run(self):
         """ Thread's activity. The loop with game ticks.
@@ -254,93 +285,94 @@ class Game(Thread):
         else:
             train.speed = 0
 
+    @state_required(GameState.RUN)
+    @with_lock  # TODO: remove this lock?
     def move_train(self, player, train_idx, speed, line_idx):
         """ Process action MOVE. Changes path or speed of the Train.
         """
-        with self._lock:
-            if train_idx not in self.trains:
-                raise errors.ResourceNotFound('Train index not found, index: {}'.format(train_idx))
-            if line_idx not in self.map.lines:
-                raise errors.ResourceNotFound('Line index not found, index: {}'.format(line_idx))
-            train = self.trains[train_idx]
-            if train.player_idx != player.idx:
-                raise errors.AccessDenied('Train\'s owner mismatch')
-            if train_idx in self.next_train_moves:
-                self.next_train_moves.pop(train_idx)
+        if train_idx not in self.trains:
+            raise errors.ResourceNotFound('Train index not found, index: {}'.format(train_idx))
+        if line_idx not in self.map.lines:
+            raise errors.ResourceNotFound('Line index not found, index: {}'.format(line_idx))
+        train = self.trains[train_idx]
+        if train.player_idx != player.idx:
+            raise errors.AccessDenied('Train\'s owner mismatch')
+        if train_idx in self.next_train_moves:
+            self.next_train_moves.pop(train_idx)
 
-            # Check cooldown for the train:
-            if train.cooldown > 0:
-                raise errors.BadCommand('The train is under cooldown, cooldown: {}'.format(train.cooldown))
+        # Check cooldown for the train:
+        if train.cooldown > 0:
+            raise errors.BadCommand('The train is under cooldown, cooldown: {}'.format(train.cooldown))
 
-            # Stop the train; reverse direction on move; continue run the train:
-            if speed == 0 or train.line_idx == line_idx:
-                train.speed = speed
+        # Stop the train; reverse direction on move; continue run the train:
+        if speed == 0 or train.line_idx == line_idx:
+            train.speed = speed
 
-            # The train is standing:
-            elif train.speed == 0:
-                # The train is standing at the end of the line:
-                if self.map.lines[train.line_idx].length == train.position:
-                    line_from = self.map.lines[train.line_idx]
-                    line_to = self.map.lines[line_idx]
-                    if line_from.points[1] in line_to.points:
-                        train.line_idx = line_idx
-                        train.speed = speed
-                        if line_from.points[1] == line_to.points[0]:
-                            train.position = 0
-                        else:
-                            train.position = line_to.length
-                    else:
-                        raise errors.BadCommand(
-                            'The end of the train\'s line is not connected to the next line, '
-                            'train\'s line: {}, next line: {}'.format(line_from, line_to)
-                        )
-                # The train is standing at the beginning of the line:
-                elif train.position == 0:
-                    line_from = self.map.lines[train.line_idx]
-                    line_to = self.map.lines[line_idx]
-                    if line_from.points[0] in line_to.points:
-                        train.line_idx = line_idx
-                        train.speed = speed
-                        if line_from.points[0] == line_to.points[0]:
-                            train.position = 0
-                        else:
-                            train.position = line_to.length
-                    else:
-                        raise errors.BadCommand(
-                            'The beginning of the train\'s line is not connected to the next line, '
-                            'train\'s line: {}, next line: {}'.format(line_from, line_to)
-                        )
-                # The train is standing on the line (between line's points), player have to continue run the train.
-                else:
-                    raise errors.BadCommand(
-                        'The train is standing on the line (between line\'s points), '
-                        'player have to continue run the train'
-                    )
-
-            # The train is moving on the line (between line's points):
-            elif train.speed != 0 and train.line_idx != line_idx:
-                switch_line_possible = False
+        # The train is standing:
+        elif train.speed == 0:
+            # The train is standing at the end of the line:
+            if self.map.lines[train.line_idx].length == train.position:
                 line_from = self.map.lines[train.line_idx]
                 line_to = self.map.lines[line_idx]
-                if train.speed > 0 and speed > 0:
-                    switch_line_possible = (line_from.points[1] == line_to.points[0])
-                elif train.speed > 0 and speed < 0:
-                    switch_line_possible = (line_from.points[1] == line_to.points[1])
-                elif train.speed < 0 and speed > 0:
-                    switch_line_possible = (line_from.points[0] == line_to.points[0])
-                elif train.speed < 0 and speed < 0:
-                    switch_line_possible = (line_from.points[0] == line_to.points[1])
-
-                # This train move request is valid and will be applied later:
-                if switch_line_possible:
-                    self.next_train_moves[train_idx] = {'speed': speed, 'line_idx': line_idx}
-                # This train move request is invalid:
+                if line_from.points[1] in line_to.points:
+                    train.line_idx = line_idx
+                    train.speed = speed
+                    if line_from.points[1] == line_to.points[0]:
+                        train.position = 0
+                    else:
+                        train.position = line_to.length
                 else:
                     raise errors.BadCommand(
-                        'The train is not able to switch the current line to the next line, '
-                        'or new speed is incorrect, train\'s line: {}, next line: {}, '
-                        'train\'s speed: {}, new speed: {}'.format(line_from, line_to, train.speed, speed)
+                        'The end of the train\'s line is not connected to the next line, '
+                        'train\'s line: {}, next line: {}'.format(line_from, line_to)
                     )
+            # The train is standing at the beginning of the line:
+            elif train.position == 0:
+                line_from = self.map.lines[train.line_idx]
+                line_to = self.map.lines[line_idx]
+                if line_from.points[0] in line_to.points:
+                    train.line_idx = line_idx
+                    train.speed = speed
+                    if line_from.points[0] == line_to.points[0]:
+                        train.position = 0
+                    else:
+                        train.position = line_to.length
+                else:
+                    raise errors.BadCommand(
+                        'The beginning of the train\'s line is not connected to the next line, '
+                        'train\'s line: {}, next line: {}'.format(line_from, line_to)
+                    )
+            # The train is standing on the line (between line's points), player have to continue run the train.
+            else:
+                raise errors.BadCommand(
+                    'The train is standing on the line (between line\'s points), '
+                    'player have to continue run the train'
+                )
+
+        # The train is moving on the line (between line's points):
+        elif train.speed != 0 and train.line_idx != line_idx:
+            switch_line_possible = False
+            line_from = self.map.lines[train.line_idx]
+            line_to = self.map.lines[line_idx]
+            if train.speed > 0 and speed > 0:
+                switch_line_possible = (line_from.points[1] == line_to.points[0])
+            elif train.speed > 0 and speed < 0:
+                switch_line_possible = (line_from.points[1] == line_to.points[1])
+            elif train.speed < 0 and speed > 0:
+                switch_line_possible = (line_from.points[0] == line_to.points[0])
+            elif train.speed < 0 and speed < 0:
+                switch_line_possible = (line_from.points[0] == line_to.points[1])
+
+            # This train move request is valid and will be applied later:
+            if switch_line_possible:
+                self.next_train_moves[train_idx] = {'speed': speed, 'line_idx': line_idx}
+            # This train move request is invalid:
+            else:
+                raise errors.BadCommand(
+                    'The train is not able to switch the current line to the next line, '
+                    'or new speed is incorrect, train\'s line: {}, next line: {}, '
+                    'train\'s speed: {}, new speed: {}'.format(line_from, line_to, train.speed, speed)
+                )
 
     def train_in_post(self, train: Train, post: Post):
         """ Makes all needed actions when Train arrives to Post.
@@ -624,62 +656,63 @@ class Game(Thread):
         for pair in collision_pairs:
             self.make_collision(*pair)
 
+    @state_required(GameState.RUN)
+    @with_lock  # TODO: remove this lock?
     def make_upgrade(self, player: Player, posts_idx=(), trains_idx=()):
         """ Upgrades given Posts and Trains to next level.
         """
-        with self._lock:
-            # Get posts from request:
-            posts = []
-            for post_idx in posts_idx:
-                if post_idx not in self.map.posts:
-                    raise errors.ResourceNotFound('Post index not found, index: {}'.format(post_idx))
-                post = self.map.posts[post_idx]
-                if post.type != PostType.TOWN:
-                    raise errors.BadCommand('The post is not a Town, post: {}'.format(post))
-                if post.player_idx != player.idx:
-                    raise errors.AccessDenied('Town\'s owner mismatch')
-                posts.append(post)
+        # Get posts from request:
+        posts = []
+        for post_idx in posts_idx:
+            if post_idx not in self.map.posts:
+                raise errors.ResourceNotFound('Post index not found, index: {}'.format(post_idx))
+            post = self.map.posts[post_idx]
+            if post.type != PostType.TOWN:
+                raise errors.BadCommand('The post is not a Town, post: {}'.format(post))
+            if post.player_idx != player.idx:
+                raise errors.AccessDenied('Town\'s owner mismatch')
+            posts.append(post)
 
-            # Get trains from request:
-            trains = []
-            for train_idx in trains_idx:
-                if train_idx not in self.trains:
-                    raise errors.ResourceNotFound('Train index not found, index: {}'.format(train_idx))
-                train = self.trains[train_idx]
-                if train.player_idx != player.idx:
-                    raise errors.AccessDenied('Train\'s owner mismatch')
-                trains.append(train)
+        # Get trains from request:
+        trains = []
+        for train_idx in trains_idx:
+            if train_idx not in self.trains:
+                raise errors.ResourceNotFound('Train index not found, index: {}'.format(train_idx))
+            train = self.trains[train_idx]
+            if train.player_idx != player.idx:
+                raise errors.AccessDenied('Train\'s owner mismatch')
+            trains.append(train)
 
-            # Check existence of next level for each entity:
-            posts_has_next_lvl = all([p.level + 1 in CONFIG.TOWN_LEVELS for p in posts])
-            trains_has_next_lvl = all([t.level + 1 in CONFIG.TRAIN_LEVELS for t in trains])
-            if not all([posts_has_next_lvl, trains_has_next_lvl]):
-                raise errors.BadCommand('Not all entities requested for upgrade have next levels')
+        # Check existence of next level for each entity:
+        posts_has_next_lvl = all([p.level + 1 in CONFIG.TOWN_LEVELS for p in posts])
+        trains_has_next_lvl = all([t.level + 1 in CONFIG.TRAIN_LEVELS for t in trains])
+        if not all([posts_has_next_lvl, trains_has_next_lvl]):
+            raise errors.BadCommand('Not all entities requested for upgrade have next levels')
 
-            # Check armor quantity for upgrade:
-            armor_to_up_posts = sum([p.next_level_price for p in posts])
-            armor_to_up_trains = sum([t.next_level_price for t in trains])
-            armor_to_up = sum([armor_to_up_posts, armor_to_up_trains])
-            if player.town.armor < armor_to_up:
-                raise errors.BadCommand(
-                    'Not enough armor resource for upgrade, player\'s armor: {}, '
-                    'armor needed to upgrade: {}'.format(player.town.armor, armor_to_up)
-                )
+        # Check armor quantity for upgrade:
+        armor_to_up_posts = sum([p.next_level_price for p in posts])
+        armor_to_up_trains = sum([t.next_level_price for t in trains])
+        armor_to_up = sum([armor_to_up_posts, armor_to_up_trains])
+        if player.town.armor < armor_to_up:
+            raise errors.BadCommand(
+                'Not enough armor resource for upgrade, player\'s armor: {}, '
+                'armor needed to upgrade: {}'.format(player.town.armor, armor_to_up)
+            )
 
-            # Check that trains are in town now:
-            for train in trains:
-                if not self.is_train_at_post(train, post_to_check=player.town):
-                    raise errors.BadCommand('The train is not in Town now, train: {}'.format(train))
+        # Check that trains are in town now:
+        for train in trains:
+            if not self.is_train_at_post(train, post_to_check=player.town):
+                raise errors.BadCommand('The train is not in Town now, train: {}'.format(train))
 
-            # Upgrade entities:
-            for post in posts:
-                player.town.armor -= post.next_level_price
-                post.set_level(post.level + 1)
-                log.info('Post has been upgraded, post: {}'.format(post))
-            for train in trains:
-                player.town.armor -= train.next_level_price
-                train.set_level(train.level + 1)
-                log.info('Train has been upgraded, post: {}'.format(train))
+        # Upgrade entities:
+        for post in posts:
+            player.town.armor -= post.next_level_price
+            post.set_level(post.level + 1)
+            log.info('Post has been upgraded, post: {}'.format(post))
+        for train in trains:
+            player.town.armor -= train.next_level_price
+            train.set_level(train.level + 1)
+            log.info('Train has been upgraded, post: {}'.format(train))
 
     def get_map_layer(self, player, layer):
         """ Returns specified game map layer.

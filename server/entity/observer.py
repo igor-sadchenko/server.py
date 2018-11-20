@@ -56,7 +56,7 @@ class Observer(object):
                 'map_idx': game_data.map_id,
                 'length': game_length,
                 'num_players': game_data.num_players,
-                'ratings': game_data.ratings,
+                'data': game_data.data,
             }
             games_list.append(game)
 
