@@ -89,7 +89,7 @@ class Game(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     created_at = Column(DateTime, default=func.now())
-    map_id = Column(Integer, ForeignKey('maps.id'), index=True)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='SET NULL'), index=True)
     num_players = Column(Integer)
     state = Column(Integer)
     ratings = Column(JSON)
@@ -108,11 +108,11 @@ class Action(Base):
     __tablename__ = 'actions'
 
     id = Column(Integer, primary_key=True, index=True)
-    game_id = Column(Integer, ForeignKey('games.id'), index=True)
+    game_id = Column(Integer, ForeignKey('games.id', ondelete='CASCADE'), index=True)
     code = Column(Integer)
     message = Column(JSON)
     created_at = Column(DateTime, default=func.now())
-    player_id = Column(String, ForeignKey('players.id'), index=True)
+    player_id = Column(String, ForeignKey('players.id', ondelete='CASCADE'), index=True)
 
     def __eq__(self, other):
         return self.id == other.id and self.created_at == other.created_at
