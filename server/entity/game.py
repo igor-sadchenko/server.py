@@ -81,7 +81,7 @@ class Game(Thread):
             Game.GAMES.pop(game_name).delete()
 
     def check_state(self, states, error_msg=''):
-        if not isinstance(states, (list, tuple, set)):
+        if not isinstance(states, (set, tuple, list)):
             states = {states}
         if self.state in states:
             return True
