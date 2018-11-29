@@ -6,3 +6,5 @@
 * Game replaying by observer
 
 ### Define finish condition for game (e.g. turn count, first game over, etc)
+
+### Add Makefile
