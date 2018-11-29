@@ -120,7 +120,11 @@ def get_all_actions(game_idx, session=None):
 def update_game_data(game_idx, data, session=None):
     """ Creates a new Game in DB.
     """
-    game = session.query(Game).get(game_idx)
+    game = session.query(
+        Game
+    ).with_for_update(
+        of=Game, key_share=True
+    ).get(game_idx)
     if game.data:
         game.data.update(data)
     else:

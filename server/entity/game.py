@@ -88,18 +88,6 @@ class Game(Thread):
         else:
             raise errors.InappropriateGameState(error_msg)
 
-    @contextmanager
-    def _lock_all_players_ctx(self):
-        for player in self.players:
-            player.lock.acquire()
-        try:
-            yield
-        except:
-            raise
-        finally:
-            for player in self.players:
-                player.lock.release()
-
     def add_player(self, player: Player):
         """ Adds player to the game.
         """
@@ -202,12 +190,24 @@ class Game(Thread):
             if not any([p.in_game for p in self.players.values()]):
                 self.delete()
 
+    @contextmanager
+    def _turn_ctx(self):
+        map(lambda p: p.lock.acquire(), self.players.values())
+        self._lock.acquire()
+        self._tick_done_condition.acquire()
+        try:
+            yield
+        finally:
+            self._tick_done_condition.release()
+            self._lock.release()
+            map(lambda p: p.lock.release(), self.players.values())
+
     def run(self):
         """ Thread's activity. The loop with game ticks.
         """
         while not self._stop_event.is_set():
             self._start_tick_event.wait(CONFIG.TICK_TIME)
-            with self._lock and self._tick_done_condition and self._lock_all_players_ctx:
+            with self._turn_ctx():
                 if self.state != GameState.RUN:
                     break  # Finish game thread.
                 try:

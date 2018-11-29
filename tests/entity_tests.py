@@ -2,7 +2,6 @@
 """
 
 import json
-import unittest
 
 from server.db import map_db
 from server.entity.map import Map
@@ -10,20 +9,17 @@ from server.entity.player import Player
 from server.entity.point import Point
 from server.entity.post import Post, PostType
 from server.entity.train import Train
+from tests.lib.base_test import BaseTest
 
 
-class TestEntity(unittest.TestCase):
+class TestEntity(BaseTest):
 
     MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):
-        map_db.reset_db()
+        super().setUpClass()
         map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
-
-    @classmethod
-    def tearDownClass(cls):
-        map_db.reset_db()
 
     def test_map_init(self):
         """ Test create map entity.

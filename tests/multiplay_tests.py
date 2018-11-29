@@ -21,13 +21,7 @@ class TestMultiplay(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        map_db.reset_db()
         map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
-
-    @classmethod
-    def tearDownClass(cls):
-        map_db.reset_db()
-        super().tearDownClass()
 
     def setUp(self):
         super().setUp()
@@ -70,7 +64,7 @@ class TestMultiplay(BaseTest):
         players_in_game = 2
 
         self.login(self.players[0].name, num_players=players_in_game, connection=self.players[0].conn)
-        self.turn(exp_result=Result.BAD_COMMAND, connection=self.players[0].conn)
+        self.turn(exp_result=Result.INAPPROPRIATE_GAME_STATE, connection=self.players[0].conn)
         self.login(self.players[1].name, num_players=players_in_game, connection=self.players[1].conn)
         start = time()
         self.turn(exp_result=Result.OKEY, connection=self.players[0].conn)  # Waiting for game tick.
