@@ -1,6 +1,7 @@
 """ Entity Player.
 """
 import uuid
+from threading import Lock
 
 from config import CONFIG
 from db import game_db
@@ -12,7 +13,7 @@ from entity.train import Train
 
 class Player(Serializable):
 
-    PROTECTED = {'password', 'turn_called', 'db', }
+    PROTECTED = {'password', 'turn_called', 'db', 'lock', }
     DICT_TO_LIST = {'trains', }
 
     def __init__(self, name, password=None, idx=None):
@@ -25,6 +26,7 @@ class Player(Serializable):
         self.turn_called = False
         self.in_game = False
         self.rating = 0
+        self.lock = Lock()
 
     def __eq__(self, other):
         return self.idx == other.idx

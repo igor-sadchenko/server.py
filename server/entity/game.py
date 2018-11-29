@@ -2,8 +2,8 @@
 """
 import math
 import random
+from contextlib import contextmanager
 from enum import IntEnum
-from functools import wraps
 from threading import Thread, Event, Lock, Condition
 
 import errors
@@ -25,26 +25,6 @@ class GameState(IntEnum):
     INIT = 1
     RUN = 2
     FINISHED = 3
-
-
-def state_required(*states):
-    def state_required_wrapper(func):
-        @wraps(func)
-        def wrapped(self, *args, **kwargs):
-            if self.state in states:
-                return func(self, *args, **kwargs)
-            else:
-                raise errors.BadCommand('Inappropriate game state')
-        return wrapped
-    return state_required_wrapper
-
-
-def with_lock(func):
-    @wraps(func)
-    def wrapped(self, *args, **kwargs):
-        with self._lock:
-            return func(self, *args, **kwargs)
-    return wrapped
 
 
 class Game(Thread):
@@ -100,7 +80,26 @@ class Game(Thread):
         for game_name in list(Game.GAMES.keys()):
             Game.GAMES.pop(game_name).delete()
 
-    @state_required(GameState.INIT, GameState.RUN)
+    def check_state(self, states, error_msg=''):
+        if not isinstance(states, (list, tuple, set)):
+            states = {states}
+        if self.state in states:
+            return True
+        else:
+            raise errors.InappropriateGameState(error_msg)
+
+    @contextmanager
+    def _lock_all_players_ctx(self):
+        for player in self.players:
+            player.lock.acquire()
+        try:
+            yield
+        except:
+            raise
+        finally:
+            for player in self.players:
+                player.lock.release()
+
     def add_player(self, player: Player):
         """ Adds player to the game.
         """
@@ -153,14 +152,12 @@ class Game(Thread):
 
         return player
 
-    @state_required(GameState.INIT, GameState.RUN)
     def remove_player(self, player: Player):
         """ Removes player from the game.
         """
         player.in_game = False
         self.delete_if_no_players()
 
-    @state_required(GameState.RUN)
     def turn(self, player: Player):
         """ Makes next turn.
         """
@@ -210,7 +207,7 @@ class Game(Thread):
         """
         while not self._stop_event.is_set():
             self._start_tick_event.wait(CONFIG.TICK_TIME)
-            with self._lock and self._tick_done_condition:
+            with self._lock and self._tick_done_condition and self._lock_all_players_ctx:
                 if self.state != GameState.RUN:
                     break  # Finish game thread.
                 try:
@@ -285,8 +282,6 @@ class Game(Thread):
         else:
             train.speed = 0
 
-    @state_required(GameState.RUN)
-    @with_lock  # TODO: remove this lock?
     def move_train(self, player, train_idx, speed, line_idx):
         """ Process action MOVE. Changes path or speed of the Train.
         """
@@ -656,8 +651,6 @@ class Game(Thread):
         for pair in collision_pairs:
             self.make_collision(*pair)
 
-    @state_required(GameState.RUN)
-    @with_lock  # TODO: remove this lock?
     def make_upgrade(self, player: Player, posts_idx=(), trains_idx=()):
         """ Upgrades given Posts and Trains to next level.
         """

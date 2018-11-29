@@ -10,7 +10,7 @@ import errors
 from config import CONFIG
 from db import game_db
 from defs import Action, Result
-from entity.game import Game
+from entity.game import Game, GameState
 from entity.observer import Observer
 from entity.player import Player
 from entity.serializable import Serializable
@@ -90,8 +90,8 @@ class GameServerRequestHandler(BaseRequestHandler):
                 self.error_response(Result.BAD_COMMAND, err)
             except errors.AccessDenied as err:
                 self.error_response(Result.ACCESS_DENIED, err)
-            except errors.NotReady as err:
-                self.error_response(Result.NOT_READY, err)
+            except errors.InappropriateGameState as err:
+                self.error_response(Result.INAPPROPRIATE_GAME_STATE, err)
             except errors.Timeout as err:
                 self.error_response(Result.TIMEOUT, err)
             except errors.ResourceNotFound as err:
@@ -189,6 +189,7 @@ class GameServerRequestHandler(BaseRequestHandler):
                 'requested players number: {}'.format(game_name, game.num_players, num_players)
             )
 
+        game.check_state({GameState.INIT, GameState.RUN}, 'The game is finished')
         player = game.add_player(player)
         self.game = game
         self.game_idx = game.game_idx
@@ -215,20 +216,25 @@ class GameServerRequestHandler(BaseRequestHandler):
     @login_required
     def on_move(self, data: dict):
         self.check_keys(data, ['train_idx', 'speed', 'line_idx'])
-        self.game.move_train(self.player, data['train_idx'], data['speed'], data['line_idx'])
+        self.game.check_state({GameState.RUN}, 'The game is not running')
+        with self.player.lock:
+            self.game.move_train(self.player, data['train_idx'], data['speed'], data['line_idx'])
         return Result.OKEY, None
 
     @login_required
     def on_turn(self, _):
+        self.game.check_state({GameState.RUN}, 'The game is not running')
         self.game.turn(self.player)
         return Result.OKEY, None
 
     @login_required
     def on_upgrade(self, data: dict):
         self.check_keys(data, ['trains', 'posts'], agg_func=any)
-        self.game.make_upgrade(
-            self.player, posts_idx=data.get('posts', []), trains_idx=data.get('trains', [])
-        )
+        self.game.check_state({GameState.RUN}, 'The game is not running')
+        with self.player.lock:
+            self.game.make_upgrade(
+                self.player, posts_idx=data.get('posts', []), trains_idx=data.get('trains', [])
+            )
         return Result.OKEY, None
 
     @login_required
@@ -254,12 +260,12 @@ class GameServerRequestHandler(BaseRequestHandler):
         Action.PLAYER: on_player,
         Action.OBSERVER: on_observer,
     }
-    REPLAY_ACTIONS = (
+    REPLAY_ACTIONS = {
         Action.LOGIN,
         Action.LOGOUT,
         Action.MOVE,
         Action.UPGRADE,
-    )
+    }
 
 
 @task
