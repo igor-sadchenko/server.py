@@ -13,13 +13,7 @@ class TestErrors(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        map_db.reset_db()
         map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
-
-    @classmethod
-    def tearDownClass(cls):
-        map_db.reset_db()
-        super().tearDownClass()
 
     def test_get_map(self):
         non_existing_map_layer = 999999
@@ -99,3 +93,21 @@ class TestErrors(BaseTest):
         message = self.upgrade(trains=[non_existing_train_idx], exp_result=Result.RESOURCE_NOT_FOUND)
         self.assertIn('error', message)
         self.assertIn('Train index not found', message['error'])
+
+    def test_move_on_init(self):
+        player = self.login(game=self.game_name, num_players=2)
+        message = self.move_train(1, player['trains'][0]['idx'], 1, exp_result=Result.INAPPROPRIATE_GAME_STATE)
+        self.assertIn('error', message)
+        self.assertIn('The game is not running', message['error'])
+
+    def test_upgrade_on_init(self):
+        player = self.login(game=self.game_name, num_players=2)
+        message = self.upgrade(posts=(player['town']['idx']), exp_result=Result.INAPPROPRIATE_GAME_STATE)
+        self.assertIn('error', message)
+        self.assertIn('The game is not running', message['error'])
+
+    def test_turn_on_init(self):
+        self.login(game=self.game_name, num_players=2)
+        message = self.turn(exp_result=Result.INAPPROPRIATE_GAME_STATE)
+        self.assertIn('error', message)
+        self.assertIn('The game is not running', message['error'])

@@ -7,4 +7,4 @@
 
 ### Define finish condition for game (e.g. turn count, first game over, etc)
 
-### Save battle results (state) to DB
+### Add Makefile

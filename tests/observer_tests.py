@@ -18,15 +18,9 @@ class TestObserver(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        map_db.reset_db()
         with session_ctx() as session:
             map_db.generate_maps(map_names=[TestObserver.MAP_NAME, ], active_map=TestObserver.MAP_NAME, session=session)
             generate_replay01(session)
-
-    @classmethod
-    def tearDownClass(cls):
-        map_db.reset_db()
-        super().tearDownClass()
 
     def test_observer_get_game_list(self):
         """ Connect as observer, get list of recorded games, verify list of games.

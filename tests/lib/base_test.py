@@ -2,10 +2,14 @@
 """
 
 import json
+import time
 import unittest
 from datetime import datetime
 
 from server.config import CONFIG
+from server.db import map_db
+from server.db.models import Game
+from server.db.session import session_ctx
 from server.defs import Action, Result
 from tests.lib.server_connection import ServerConnection
 
@@ -20,8 +24,37 @@ class BaseTest(unittest.TestCase):
         self.current_tick = 0
         self._connection = None
 
+    @classmethod
+    def setUpClass(cls):
+        cls.clear_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.wait_for_finished_games()
+        cls.clear_db()
+
     def tearDown(self):
         self.reset_connection()
+
+    @staticmethod
+    def clear_db():
+        map_db.reset_db()
+
+    @staticmethod
+    def wait_for_finished_games(retries=10, period=1):
+        with session_ctx() as db:
+            for _ in range(retries):
+                game = db.query(
+                    Game
+                ).filter(
+                    Game.data.is_(None)
+                ).first()
+                if game:
+                    time.sleep(period)
+                else:
+                    return True
+            else:
+                return False
 
     @property
     def connection(self):

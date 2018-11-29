@@ -1,7 +1,6 @@
 """ Test DB helpers for game actions.
 """
 
-import unittest
 import uuid
 
 from sqlalchemy import and_, func
@@ -10,29 +9,28 @@ from server.db import map_db, game_db
 from server.db.models import Game, Action, Player
 from server.db.session import Session
 from server.defs import Action as ActionCodes
+from tests.lib.base_test import BaseTest
 
 
-class TestGameDb(unittest.TestCase):
+class TestGameDb(BaseTest):
 
     MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):
-        map_db.reset_db()
+        super().setUpClass()
         map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
         cls.map_id = map_db.get_map_by_name(cls.MAP_NAME).id
 
-    @classmethod
-    def tearDownClass(cls):
-        map_db.reset_db()
-
     def setUp(self):
+        super().setUp()
         game_db.truncate_tables()
         self.session = Session()
 
     def tearDown(self):
         game_db.truncate_tables()
         self.session.close()
+        super().tearDown()
 
     def test_add_game(self):
         num_players_1 = 1

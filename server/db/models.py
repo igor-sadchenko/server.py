@@ -3,6 +3,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, JSON
 from sqlalchemy import func
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
 
 from db.session import engine
@@ -91,8 +92,7 @@ class Game(Base):
     created_at = Column(DateTime, default=func.now())
     map_id = Column(Integer, ForeignKey('maps.id', ondelete='SET NULL'), index=True)
     num_players = Column(Integer)
-    state = Column(Integer)
-    ratings = Column(JSON)
+    data = Column(MutableDict.as_mutable(JSON))
     actions = relationship('Action', backref='game', lazy='dynamic')
 
     def __eq__(self, other):
@@ -101,6 +101,9 @@ class Game(Base):
     def __repr__(self):
         return "<Game(id='{}', name='{}', created_at='{}', map_id='{}', num_players='{}')>".format(
             self.id, self.name, self.created_at, self.map_id, self.num_players)
+
+    def __hash__(self):
+        return id(self)
 
 
 class Action(Base):

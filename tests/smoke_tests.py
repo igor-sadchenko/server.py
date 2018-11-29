@@ -14,13 +14,7 @@ class TestSmoke(BaseTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        map_db.reset_db()
         map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
-
-    @classmethod
-    def tearDownClass(cls):
-        map_db.reset_db()
-        super().tearDownClass()
 
     def test_login_logout(self):
         """ Test logout.
