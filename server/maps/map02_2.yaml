@@ -26,18 +26,18 @@ posts:
     name: 'market-big'
     type: 2  # MARKET
     product: 36
-    replenishment: 3
+    replenishment: 6
   - point: 5
     name: 'market-medium'
     type: 2  # MARKET
     product: 28
-    replenishment: 2
+    replenishment: 4
   - point: 7
     name: 'market-small'
     type: 2  # MARKET
     product: 4
     replenishment: 1
-  - point: 6
+  - point: 9
     name: 'storage-medium'
     type: 3  # STORAGE
     armor: 28
