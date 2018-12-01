@@ -31,7 +31,10 @@ class Game(Thread):
 
     GAMES = {}  # All registered games.
 
-    def __init__(self, name, observed=False, num_players=1, map_name=None):
+    def __init__(
+            self, name, observed=False, map_name=None,
+            num_players=CONFIG.DEFAULT_NUM_PLAYERS, num_turns=CONFIG.DEFAULT_NUM_TURNS
+    ):
         super(Game, self).__init__(name=name)
         log.info('Create game, name: \'{}\''.format(self.name))
         self.name = name
@@ -39,6 +42,7 @@ class Game(Thread):
         self.current_tick = 0
         self.observed = observed
         self.num_players = num_players
+        self.num_turns = num_turns
         self.map = Map(use_active=True) if map_name is None else Map(name=map_name)
         if self.num_players > len(self.map.towns):
             raise errors.BadCommand(
@@ -48,7 +52,9 @@ class Game(Thread):
         if self.observed:
             self.game_idx = 0
         else:
-            self.game_idx = game_db.add_game(name, self.map.idx, num_players=num_players)
+            self.game_idx = game_db.add_game(
+                name, self.map.idx, num_players=num_players, num_turns=num_turns
+            )
         self.players = {}
         self.trains = {}
         self.next_train_moves = {}
@@ -58,6 +64,9 @@ class Game(Thread):
         self._start_tick_event = Event()
         self._tick_done_condition = Condition()
         random.seed()
+
+    def __repr__(self):
+        return '|'.join(map(str, (self.game_idx, self.name, self.state, self.current_tick)))
 
     @property
     def is_finished(self):
@@ -136,7 +145,7 @@ class Game(Thread):
             'idx': player.idx,
         }
 
-        log.info('Add new player to the game, player: {}'.format(player))
+        log.info('New player has been connected to the game, player: {}'.format(player), game=self)
 
         return player
 
@@ -161,7 +170,7 @@ class Game(Thread):
     def start(self):
         """ Starts game ticks (game loop).
         """
-        log.info('Game started, name: \'{}\''.format(self.name))
+        log.info('Starting game', game=self)
         self.state = GameState.RUN
         if not self.observed:
             super().start()
@@ -169,7 +178,7 @@ class Game(Thread):
     def finish(self):
         """ Stops game ticks (game loop).
         """
-        log.info('Game finished, name: \'{}\''.format(self.name))
+        log.info('Finishing game', game=self)
         self.state = GameState.FINISHED
         self._stop_event.set()
         if not self.observed:
@@ -213,7 +222,7 @@ class Game(Thread):
                 try:
                     self.tick()
                 except Exception:
-                    log.exception('Got unhandled exception on tick, game id: {}'.format(self.game_idx))
+                    log.exception('Got unhandled exception on tick', game=self)
                     raise
                 if self._start_tick_event.is_set():
                     self._start_tick_event.clear()
@@ -225,7 +234,7 @@ class Game(Thread):
         """ Makes game tick. Updates dynamic game entities.
         """
         self.current_tick += 1
-        log.info('Game tick, tick number: {}, game id: {}'.format(self.current_tick, self.game_idx))
+        log.info('Game tick', game=self)
 
         # Turn steps:
         self.update_cooldowns_on_tick()  # Update cooldowns in the beginning of the tick.
@@ -243,6 +252,9 @@ class Game(Thread):
         if not self.observed:
             game_db.add_action(self.game_idx, Action.TURN)
 
+        if 0 < self.num_turns <= self.current_tick:
+            self.finish()
+
     def train_in_point(self, train: Train, point_idx: int):
         """ Makes all needed actions when Train arrives to Point.
         Applies next Train move if it exist, processes Post if exist in the Point.
@@ -254,7 +266,7 @@ class Game(Thread):
             msg += ", post: {!r}".format(self.map.posts[post_idx].type)
             self.train_in_post(train, self.map.posts[post_idx])
 
-        log.debug(msg)
+        log.debug(msg, game=self)
 
         self.apply_next_train_move(train)
 
@@ -441,7 +453,7 @@ class Game(Thread):
     def make_hijackers_assault(self, hijackers_power):
         """ Makes hijackers assault which decreases quantity of Town's armor and population.
         """
-        log.info('Hijackers assault happened, hijackers power: {}'.format(hijackers_power))
+        log.info('Hijackers assault happened, hijackers power: {}'.format(hijackers_power), game=self)
         event = GameEvent(EventType.HIJACKERS_ASSAULT, self.current_tick, hijackers_power=hijackers_power)
         for player in self.players.values():
             player.town.population = max(player.town.population - max(hijackers_power - player.town.armor, 0), 0)
@@ -467,7 +479,7 @@ class Game(Thread):
     def make_parasites_assault(self, parasites_power):
         """ Makes parasites assault which decreases quantity of Town's product.
         """
-        log.info('Parasites assault happened, parasites power: {}'.format(parasites_power))
+        log.info('Parasites assault happened, parasites power: {}'.format(parasites_power), game=self)
         event = GameEvent(EventType.PARASITES_ASSAULT, self.current_tick, parasites_power=parasites_power)
         for player in self.players.values():
             player.town.product = max(player.town.product - parasites_power, 0)
@@ -492,7 +504,7 @@ class Game(Thread):
     def make_refugees_arrival(self, refugees_number):
         """ Makes refugees arrival which increases quantity of Town's population.
         """
-        log.info('Refugees arrival happened, refugees number: {}'.format(refugees_number))
+        log.info('Refugees arrival happened, refugees number: {}'.format(refugees_number), game=self)
         event = GameEvent(EventType.REFUGEES_ARRIVAL, self.current_tick, refugees_number=refugees_number)
         for player in self.players.values():
             player.town.population += max(
@@ -600,7 +612,7 @@ class Game(Thread):
     def make_collision(self, train_1: Train, train_2: Train):
         """ Makes collision between two trains.
         """
-        log.info('Trains collision happened, trains: [{}, {}]'.format(train_1, train_2))
+        log.info('Trains collision happened, trains: [{}, {}]'.format(train_1, train_2), game=self)
         self.put_train_into_town(train_1, with_unload=True, with_cooldown=True)
         self.put_train_into_town(train_2, with_unload=True, with_cooldown=True)
         train_1.events.append(GameEvent(EventType.TRAIN_COLLISION, self.current_tick, train=train_2.idx))
@@ -701,11 +713,11 @@ class Game(Thread):
         for post in posts:
             player.town.armor -= post.next_level_price
             post.set_level(post.level + 1)
-            log.info('Post has been upgraded, post: {}'.format(post))
+            log.info('Post has been upgraded, post: {}'.format(post), game=self)
         for train in trains:
             player.town.armor -= train.next_level_price
             train.set_level(train.level + 1)
-            log.info('Train has been upgraded, post: {}'.format(train))
+            log.info('Train has been upgraded, post: {}'.format(train), game=self)
 
     def get_map_layer(self, player, layer):
         """ Returns specified game map layer.
@@ -713,7 +725,7 @@ class Game(Thread):
         if layer not in self.map.LAYERS or (layer in CONFIG.HIDDEN_MAP_LAYERS and not self.observed):
             raise errors.ResourceNotFound('Map layer not found, layer: {}'.format(layer))
 
-        log.debug('Load game map layer, layer: {}'.format(layer))
+        log.debug('Load game map layer, layer: {}'.format(layer), game=self)
         message = self.map.layer_to_json_str(layer)
 
         if layer == 1 and not self.observed:
@@ -758,4 +770,4 @@ class Game(Thread):
             post.events = post.events[-CONFIG.MAX_EVENT_MESSAGES:]
 
     def __del__(self):
-        log.info('Game deleted, name: \'{}\''.format(self.name))
+        log.info('Game deleted', game=self)

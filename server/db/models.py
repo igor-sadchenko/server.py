@@ -16,8 +16,8 @@ class Map(Base):
     __tablename__ = 'maps'
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    active = Column(Boolean, default=False, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    active = Column(Boolean, default=False, index=True, nullable=False)
     size_x = Column(Integer)
     size_y = Column(Integer)
     lines = relationship('Line', backref='map', lazy='dynamic')
@@ -34,10 +34,10 @@ class Line(Base):
     __tablename__ = 'lines'
 
     id = Column(Integer, primary_key=True, index=True)
-    length = Column(Integer)
-    p0 = Column(Integer)
-    p1 = Column(Integer)
-    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True)
+    length = Column(Integer, nullable=False)
+    p0 = Column(Integer, nullable=False)
+    p1 = Column(Integer, nullable=False)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True, nullable=False)
 
     def __repr__(self):
         return "<Line(id='{}', length='{}', p0='{}', p1='{}', map_id='{}')>".format(
@@ -49,7 +49,7 @@ class Point(Base):
     __tablename__ = 'points'
 
     id = Column(Integer, primary_key=True, index=True)
-    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True, nullable=False)
     x = Column(Integer)
     y = Column(Integer)
     posts = relationship('Post', backref='point', lazy='dynamic')
@@ -64,14 +64,14 @@ class Post(Base):
     __tablename__ = 'posts'
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    type = Column(Integer)
+    name = Column(String, nullable=False)
+    type = Column(Integer, nullable=False)
     population = Column(Integer)
     armor = Column(Integer)
     product = Column(Integer)
     replenishment = Column(Integer)
-    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True)
-    point_id = Column(Integer, ForeignKey('points.id', ondelete='CASCADE'), index=True)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='CASCADE'), index=True, nullable=False)
+    point_id = Column(Integer, ForeignKey('points.id', ondelete='CASCADE'), index=True, nullable=False)
 
     def __repr__(self):
         return (
@@ -88,10 +88,13 @@ class Game(Base):
     __tablename__ = 'games'
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    created_at = Column(DateTime, default=func.now())
-    map_id = Column(Integer, ForeignKey('maps.id', ondelete='SET NULL'), index=True)
-    num_players = Column(Integer)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    # TODO: use updated_at field
+    updated_at = Column(DateTime)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='SET NULL'), index=True, nullable=False)
+    num_players = Column(Integer, nullable=False)
+    num_turns = Column(Integer, nullable=False)
     data = Column(MutableDict.as_mutable(JSON))
     actions = relationship('Action', backref='game', lazy='dynamic')
 
@@ -111,10 +114,10 @@ class Action(Base):
     __tablename__ = 'actions'
 
     id = Column(Integer, primary_key=True, index=True)
-    game_id = Column(Integer, ForeignKey('games.id', ondelete='CASCADE'), index=True)
-    code = Column(Integer)
+    game_id = Column(Integer, ForeignKey('games.id', ondelete='CASCADE'), index=True, nullable=False)
+    code = Column(Integer, nullable=False)
     message = Column(JSON)
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now(), nullable=False)
     player_id = Column(String, ForeignKey('players.id', ondelete='CASCADE'), index=True)
 
     def __eq__(self, other):
@@ -130,9 +133,9 @@ class Player(Base):
     __tablename__ = 'players'
 
     id = Column(String, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
     password = Column(String)
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now(), nullable=False)
 
     def __eq__(self, other):
         return self.id == other.id and self.created_at == other.created_at
