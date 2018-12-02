@@ -101,12 +101,10 @@ class TestMultiplay(BaseTest):
         self.assertIn('Unable to create game', message['error'])
 
         self.login(self.players[0].name, num_players=players_in_game, connection=self.players[0].conn)
-        message = self.login(self.players[1].name, num_players=players_in_game + 1,
-                             exp_result=Result.BAD_COMMAND, connection=self.players[1].conn)
-        self.assertIn('error', message)
-        self.assertIn('Incorrect players number requested', message['error'])
 
-        self.login(self.players[1].name, num_players=players_in_game, connection=self.players[1].conn)
+        self.login(self.players[1].name, num_players=players_in_game + 1,
+                   exp_result=Result.OKEY, connection=self.players[1].conn)
+
         message = self.login(self.players[2].name, num_players=players_in_game,
                              exp_result=Result.ACCESS_DENIED, connection=self.players[2].conn)
         self.assertIn('error', message)

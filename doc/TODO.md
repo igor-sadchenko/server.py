@@ -5,9 +5,8 @@
 * Fuel consumption (train moves to the Town when fuel == 0)
 * Game replaying by observer
 * Game finishing on condition
-* Action 'GAMES'
 
-### Define finish condition for game (e.g. turn count, first game over, etc)
+### Define new finish conditions for game: first game over, all game over?
 
 ### Add Makefile
 

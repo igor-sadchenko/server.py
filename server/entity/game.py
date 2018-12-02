@@ -273,7 +273,7 @@ class Game(Thread):
         if not self.observed:
             game_db.add_action(self.game_idx, Action.TURN)
 
-        if 0 < self.num_turns <= self.current_tick:
+        if 1 <= self.num_turns <= self.current_tick:
             self.finish()
 
     def train_in_point(self, train: Train, point_idx: int):
