@@ -70,6 +70,8 @@ class Game(Thread):
 
     @property
     def is_finished(self):
+        """ Returns True if state of the game is FINISHED.
+        """
         return self.state == GameState.FINISHED
 
     @staticmethod
@@ -83,19 +85,36 @@ class Game(Thread):
         return game
 
     @staticmethod
+    def get_all_active_games():
+        """ Returns parameters of all non-finished games.
+        """
+        games = []
+        for game in Game.GAMES.values():
+            if game.state != GameState.FINISHED:
+                games.append(
+                    {
+                        'name': game.name,
+                        'num_players': game.num_players,
+                        'num_turns': game.num_turns,
+                        'state': game.state,
+                    }
+                )
+        return games
+
+    @staticmethod
     def stop_all_games():
         """ Stops all games. Uses on server shutdown.
         """
         for game_name in list(Game.GAMES.keys()):
             Game.GAMES.pop(game_name).delete()
 
-    def check_state(self, states, error_msg=''):
-        if not isinstance(states, (set, tuple, list)):
-            states = {states}
+    def check_state(self, *states):
+        """ Checks is state of the game corresponds to any specified state, raises error if not.
+        """
         if self.state in states:
             return True
         else:
-            raise errors.InappropriateGameState(error_msg)
+            raise errors.InappropriateGameState('Inappropriate game state: {!r}'.format(self.state))
 
     def add_player(self, player: Player):
         """ Adds player to the game.
@@ -201,6 +220,8 @@ class Game(Thread):
 
     @contextmanager
     def _turn_ctx(self):
+        """ Locks all needed for turn locks and releases them after turn.
+        """
         map(lambda p: p.lock.acquire(), self.players.values())
         self._lock.acquire()
         self._tick_done_condition.acquire()

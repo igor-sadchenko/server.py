@@ -1,6 +1,7 @@
 """ Game server.
 """
 import json
+import socket
 from functools import wraps
 from socketserver import ThreadingTCPServer, BaseRequestHandler
 
@@ -28,6 +29,9 @@ def login_required(func):
 
 
 class GameServerRequestHandler(BaseRequestHandler):
+
+    HANDLERS = {}
+
     def __init__(self, *args, **kwargs):
         self.action = None
         self.message_len = None
@@ -43,6 +47,7 @@ class GameServerRequestHandler(BaseRequestHandler):
     def setup(self):
         log.info('New connection from {}'.format(self.client_address), game=self.game)
         self.closed = False
+        self.HANDLERS[id(self)] = self
 
     def handle(self):
         while not self.closed:
@@ -52,12 +57,18 @@ class GameServerRequestHandler(BaseRequestHandler):
             else:
                 self.closed = True
 
+    @staticmethod
+    def shutdown_all_sockets():
+        for handler in GameServerRequestHandler.HANDLERS.values():
+            handler.request.shutdown(socket.SHUT_RDWR)
+
     def finish(self):
         log.warn('Connection from {} lost'.format(self.client_address), game=self.game)
         if self.game is not None and self.player is not None and self.player.in_game:
             self.game.remove_player(self.player)
             if not self.observer:
                 game_db.add_action(self.game_idx, Action.LOGOUT, player_idx=self.player.idx)
+        self.HANDLERS.pop(id(self))
 
     def data_received(self, data):
         if self.data:
@@ -182,7 +193,7 @@ class GameServerRequestHandler(BaseRequestHandler):
 
         game = Game.get(game_name, num_players=num_players, num_turns=num_turns)
 
-        game.check_state({GameState.INIT, GameState.RUN}, 'The game is finished')
+        game.check_state(GameState.INIT, GameState.RUN)
         player = game.add_player(player)
         self.game = game
         self.game_idx = game.game_idx
@@ -209,21 +220,21 @@ class GameServerRequestHandler(BaseRequestHandler):
     @login_required
     def on_move(self, data: dict):
         self.check_keys(data, ['train_idx', 'speed', 'line_idx'])
-        self.game.check_state({GameState.RUN}, 'The game is not running')
+        self.game.check_state(GameState.RUN)
         with self.player.lock:
             self.game.move_train(self.player, data['train_idx'], data['speed'], data['line_idx'])
         return Result.OKEY, None
 
     @login_required
     def on_turn(self, _):
-        self.game.check_state({GameState.RUN}, 'The game is not running')
+        self.game.check_state(GameState.RUN)
         self.game.turn(self.player)
         return Result.OKEY, None
 
     @login_required
     def on_upgrade(self, data: dict):
         self.check_keys(data, ['trains', 'posts'], agg_func=any)
-        self.game.check_state({GameState.RUN}, 'The game is not running')
+        self.game.check_state(GameState.RUN)
         with self.player.lock:
             self.game.make_upgrade(
                 self.player, posts_idx=data.get('posts', []), trains_idx=data.get('trains', [])
@@ -234,6 +245,13 @@ class GameServerRequestHandler(BaseRequestHandler):
     def on_player(self, _):
         message = self.player.to_json_str()
         return Result.OKEY, message
+
+    def on_list_games(self, _):
+        games = Serializable()
+        games.set_attributes(
+            games=Game.get_all_active_games()
+        )
+        return Result.OKEY, games.to_json_str()
 
     def on_observer(self, _):
         if self.game or self.observer:
@@ -251,6 +269,7 @@ class GameServerRequestHandler(BaseRequestHandler):
         Action.UPGRADE: on_upgrade,
         Action.TURN: on_turn,
         Action.PLAYER: on_player,
+        Action.GAMES: on_list_games,
         Action.OBSERVER: on_observer,
     }
     REPLAY_ACTIONS = {
@@ -275,6 +294,7 @@ def run_server(_, address=CONFIG.SERVER_ADDR, port=CONFIG.SERVER_PORT, log_level
         log.warn('Server stopped by keyboard interrupt, shutting down...')
     finally:
         try:
+            GameServerRequestHandler.shutdown_all_sockets()
             Game.stop_all_games()
             if log.is_queued:
                 log.stop()

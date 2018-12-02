@@ -10,6 +10,20 @@ from config import CONFIG
 LOGGERS = {}
 
 
+class DefaultLogger(logging.Logger):
+    """ Default game logger class to format each record with game.
+    """
+
+    def _log(self, level, msg, *args, **kwargs):
+        game = kwargs.pop('game', None)
+        if game:
+            msg = '[{}] {}'.format(game, msg)
+        return super()._log(level, msg, *args, **kwargs)
+
+
+logging.setLoggerClass(DefaultLogger)
+
+
 class QueueHandler(logging.Handler):
     """ This handler sends events to a queue. Typically, it would be used together with a multiprocessing
     Queue to centralise logging to file in one process (in a multi-process application), so as to avoid
@@ -141,7 +155,7 @@ class QueueListener(object):
         self._process = None
 
 
-class QueuedLogger(logging.Logger):
+class QueuedLogger(DefaultLogger):
     """ This class represents logger which uses queue for messages and separated process to handle this messages.
     """
 
@@ -162,12 +176,6 @@ class QueuedLogger(logging.Logger):
             self.debug('Stopping logger name={0}'.format(self.name))
             self.queue_listener.stop()
             self.is_started = False
-
-    def _log(self, level, msg, *args, **kwargs):
-        game = kwargs.pop('game', None)
-        if game:
-            msg = '[{}] {}'.format(game, msg)
-        return super()._log(level, msg, *args, **kwargs)
 
 
 def get_logger(name=None, level=logging.INFO, queued=False, log_file=None, use_stream=True, use_file=False):

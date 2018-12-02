@@ -1,5 +1,7 @@
 """ DB models.
 """
+from datetime import datetime
+
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, JSON
 from sqlalchemy import func
 from sqlalchemy.ext.declarative import declarative_base
@@ -89,9 +91,10 @@ class Game(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-    # TODO: use updated_at field
-    updated_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, server_default=func.now(), onupdate=datetime.utcnow
+    )
     map_id = Column(Integer, ForeignKey('maps.id', ondelete='SET NULL'), index=True, nullable=False)
     num_players = Column(Integer, nullable=False)
     num_turns = Column(Integer, nullable=False)
@@ -117,7 +120,7 @@ class Action(Base):
     game_id = Column(Integer, ForeignKey('games.id', ondelete='CASCADE'), index=True, nullable=False)
     code = Column(Integer, nullable=False)
     message = Column(JSON)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, server_default=func.now(), nullable=False)
     player_id = Column(String, ForeignKey('players.id', ondelete='CASCADE'), index=True)
 
     def __eq__(self, other):
@@ -135,7 +138,7 @@ class Player(Base):
     id = Column(String, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
     password = Column(String)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, server_default=func.now(), nullable=False)
 
     def __eq__(self, other):
         return self.id == other.id and self.created_at == other.created_at
