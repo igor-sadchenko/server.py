@@ -21,6 +21,7 @@ class TestGameList(BaseTest):
 
     def setUp(self):
         super().setUp()
+        self.assertTrue(self.wait_for_finished_games())
         self.players = []
         for i in range(self.NUM_TOWNS):
             player_name = 'test_player_{}_{}_{}'.format(i, self.id(), self.test_start)
