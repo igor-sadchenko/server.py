@@ -25,12 +25,12 @@ posts:
   - point: 4
     name: 'market-big'
     type: 2  # MARKET
-    product: 36
+    product: 72
     replenishment: 6
   - point: 5
     name: 'market-medium'
     type: 2  # MARKET
-    product: 28
+    product: 56
     replenishment: 4
   - point: 7
     name: 'market-small'
