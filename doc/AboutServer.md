@@ -17,6 +17,7 @@ enum Action
     UPGRADE = 4,
     TURN = 5,
     PLAYER = 6,
+    GAMES = 7,
     MAP = 10
 }
 ```
@@ -35,7 +36,7 @@ enum Result
     BAD_COMMAND = 1,
     RESOURCE_NOT_FOUND = 2,
     ACCESS_DENIED = 3,
-    NOT_READY = 4,
+    INAPPROPRIATE_GAME_STATE = 4,
     TIMEOUT = 5,
     INTERNAL_SERVER_ERROR = 500
 }
@@ -76,11 +77,9 @@ The server expects to receive following required values:
 Also following values are not required:
 
 * **password** - player's password used to verify the connection, if player with the same name tries to connect with another password - login will be rejected
-
-For multi-play game you have to define additional values:
-
-* **num_players** - number of players in the game
-* **game** - game's name
+* **game** - game's name (use it to connect to existing game)
+* **num_turns** - number of game turns to be played, default: -1 (if **num_turns** < 1 it means that the game is unlimited)
+* **num_players** - number of players in the game, default: 1
 
 #### Example: LOGIN request
     
@@ -469,6 +468,45 @@ The action does not require any data.
     |action|msg length|msg|
     |------|----------|---|
     |5     |0         |   |
+
+### GAMES action
+
+This action reads information about existing games which are not finished yet.
+A game can has following states:
+
+```C++
+enum GameState
+{
+    INIT = 1,
+    RUN = 2,
+    FINISHED = 3
+}
+```
+
+The GAMES action does not require any data.
+
+#### Example: GAMES request
+
+    b'\x07\x00\x00\x00\x00\x00\x00\x00'
+    
+    |action|msg length|msg|
+    |------|----------|---|
+    |7     |0         |   |
+
+#### Example: GAMES response message
+
+``` JSON
+{
+    "games": [
+        {
+            "name": "Try to win me!",
+            "num_players": 4,
+            "num_turns": 1000,
+            "state": 2
+        }
+    ]
+}
+```
 
 ## About the Game
 

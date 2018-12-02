@@ -12,6 +12,7 @@ class Action(IntEnum):
     UPGRADE = 4
     TURN = 5
     PLAYER = 6
+    GAMES = 7
     MAP = 10
 
     # Observer actions:
@@ -29,6 +30,6 @@ class Result(IntEnum):
     BAD_COMMAND = 1
     RESOURCE_NOT_FOUND = 2
     ACCESS_DENIED = 3
-    NOT_READY = 4
+    INAPPROPRIATE_GAME_STATE = 4
     TIMEOUT = 5
     INTERNAL_SERVER_ERROR = 500

@@ -12,6 +12,7 @@
     UPGRADE = <span class="hljs-number">4</span>,
     TURN = <span class="hljs-number">5</span>,
     PLAYER = <span class="hljs-number">6</span>,
+    GAMES = <span class="hljs-number">7</span>,
     MAP = <span class="hljs-number">10</span>
 }
 </code></pre>
@@ -25,7 +26,7 @@
     BAD_COMMAND = <span class="hljs-number">1</span>,
     RESOURCE_NOT_FOUND = <span class="hljs-number">2</span>,
     ACCESS_DENIED = <span class="hljs-number">3</span>,
-    NOT_READY = <span class="hljs-number">4</span>,
+    INAPPROPRIATE_GAME_STATE = <span class="hljs-number">4</span>,
     TIMEOUT = <span class="hljs-number">5</span>,
     INTERNAL_SERVER_ERROR = <span class="hljs-number">500</span>
 }
@@ -48,7 +49,7 @@
     <span class="hljs-keyword">char</span> data[];
 }
 </code></pre>
-<h3><a id="LOGIN_action_67"></a>LOGIN action</h3>
+<h3><a id="LOGIN_action_68"></a>LOGIN action</h3>
 <p>This action message has to be the first in a client-server “dialog”.</p>
 <p>The server expects to receive following required values:</p>
 <ul>
@@ -57,20 +58,18 @@
 <p>Also following values are not required:</p>
 <ul>
 <li><strong>password</strong> - player’s password used to verify the connection, if player with the same name tries to connect with another password - login will be rejected</li>
+<li><strong>game</strong> - game’s name (use it to connect to existing game)</li>
+<li><strong>num_turns</strong> - number of game turns to be played, default: -1 (if <strong>num_turns</strong> &lt; 1 it means that the game is unlimited)</li>
+<li><strong>num_players</strong> - number of players in the game, default: 1</li>
 </ul>
-<p>For multi-play game you have to define additional values:</p>
-<ul>
-<li><strong>num_players</strong> - number of players in the game</li>
-<li><strong>game</strong> - game’s name</li>
-</ul>
-<h4><a id="Example_LOGIN_request_84"></a>Example: LOGIN request</h4>
+<h4><a id="Example_LOGIN_request_83"></a>Example: LOGIN request</h4>
 <pre><code>b'\x01\x00\x00\x00\x10\x00\x00\x00{&quot;name&quot;:&quot;Boris&quot;}'
 
 |action|msg length|msg             |
 |------|----------|----------------|
 |1     |16        |{&quot;name&quot;:&quot;Boris&quot;}|
 </code></pre>
-<h4><a id="Example_LOGIN_response_message_92"></a>Example: LOGIN response message</h4>
+<h4><a id="Example_LOGIN_response_message_91"></a>Example: LOGIN response message</h4>
 <pre><code class="language-JSON">{
     "<span class="hljs-attribute">home</span>": <span class="hljs-value">{
         "<span class="hljs-attribute">idx</span>": <span class="hljs-value"><span class="hljs-number">1</span></span>,
@@ -129,17 +128,17 @@
 <li><strong>town</strong> - home’s post data</li>
 <li><strong>trains</strong> - list of trains belong to the player</li>
 </ul>
-<h3><a id="PLAYER_action_154"></a>PLAYER action</h3>
+<h3><a id="PLAYER_action_153"></a>PLAYER action</h3>
 <p>This action reads information about the player. Schema of the response message is the same as response on login.</p>
 <p>The action does not require any data.</p>
-<h4><a id="Example_PLAYER_request_160"></a>Example: PLAYER request</h4>
+<h4><a id="Example_PLAYER_request_159"></a>Example: PLAYER request</h4>
 <pre><code>b'\x06\x00\x00\x00\x00\x00\x00\x00'
 
 |action|msg length|msg|
 |------|----------|---|
 |6     |0         |   |
 </code></pre>
-<h4><a id="Example_PLAYER_response_message_168"></a>Example: PLAYER response message</h4>
+<h4><a id="Example_PLAYER_response_message_167"></a>Example: PLAYER response message</h4>
 <pre><code class="language-JSON">{
     "<span class="hljs-attribute">home</span>": <span class="hljs-value">{
         "<span class="hljs-attribute">idx</span>": <span class="hljs-value"><span class="hljs-number">1</span></span>,
@@ -188,17 +187,17 @@
     ]
 </span>}
 </code></pre>
-<h3><a id="LOGOUT_action_220"></a>LOGOUT action</h3>
+<h3><a id="LOGOUT_action_219"></a>LOGOUT action</h3>
 <p>This action closes connection.</p>
 <p>The action does not require any data.</p>
-<h4><a id="Example_LOGOUT_request_226"></a>Example: LOGOUT request</h4>
+<h4><a id="Example_LOGOUT_request_225"></a>Example: LOGOUT request</h4>
 <pre><code>b'\x02\x00\x00\x00\x00\x00\x00\x00'
 
 |action|msg length|msg|
 |------|----------|---|
 |2     |0         |   |
 </code></pre>
-<h3><a id="MAP_action_234"></a>MAP action</h3>
+<h3><a id="MAP_action_233"></a>MAP action</h3>
 <p>This action reads the game map. The game map is divided into layers:</p>
 <ul>
 <li>Layer 0 - static objects: ‘idx’, ‘name’, ‘points’, ‘lines’</li>
@@ -209,14 +208,14 @@
 <ul>
 <li><strong>layer</strong> - map’s layer number</li>
 </ul>
-<h4><a id="Example_MAP_request_246"></a>Example: MAP request</h4>
+<h4><a id="Example_MAP_request_245"></a>Example: MAP request</h4>
 <pre><code>b'\x02\x00\x00\x00\x0b\x00\x00\x00{&quot;layer&quot;:0}'
 
 |action|msg length|msg        |
 |------|----------|-----------|
 |10    |11        |{&quot;layer&quot;:0}|
 </code></pre>
-<h4><a id="Example_MAP_response_message_for_layer_0_254"></a>Example: MAP response message (for layer 0)</h4>
+<h4><a id="Example_MAP_response_message_for_layer_0_253"></a>Example: MAP response message (for layer 0)</h4>
 <pre><code class="language-JSON">{
     "<span class="hljs-attribute">idx</span>": <span class="hljs-value"><span class="hljs-number">1</span></span>,
     "<span class="hljs-attribute">lines</span>": <span class="hljs-value">[
@@ -252,7 +251,7 @@
     ]
 </span>}
 </code></pre>
-<h4><a id="Example_MAP_response_message_for_layer_1_293"></a>Example: MAP response message (for layer 1)</h4>
+<h4><a id="Example_MAP_response_message_for_layer_1_292"></a>Example: MAP response message (for layer 1)</h4>
 <pre><code class="language-JSON">{
     "<span class="hljs-attribute">idx</span>": <span class="hljs-value"><span class="hljs-number">1</span></span>,
     "<span class="hljs-attribute">posts</span>": <span class="hljs-value">[
@@ -339,7 +338,7 @@
 <li><strong>speed</strong> - speed of the train</li>
 </ul>
 <p>Field <strong>ratings</strong> contains ratings of all players in the game. The rating is recalculated on every turn.</p>
-<h4><a id="Example_MAP_response_message_for_layer_10_384"></a>Example: MAP response message (for layer 10)</h4>
+<h4><a id="Example_MAP_response_message_for_layer_10_383"></a>Example: MAP response message (for layer 10)</h4>
 <pre><code class="language-JSON">{
     "<span class="hljs-attribute">coordinates</span>": <span class="hljs-value">[
         {
@@ -369,7 +368,7 @@
 <li><strong>y</strong> - y coordinate</li>
 </ul>
 <p>Field <strong>size</strong> is array of two integers: <strong>width</strong> and <strong>height</strong>.</p>
-<h3><a id="MOVE_action_419"></a>MOVE action</h3>
+<h3><a id="MOVE_action_418"></a>MOVE action</h3>
 <p>This action moves the train on the game map: changes speed, direction, line.</p>
 <p>The server expects to receive following required values:</p>
 <ul>
@@ -383,42 +382,72 @@
 </li>
 <li><strong>train_idx</strong> - index of the train</li>
 </ul>
-<h4><a id="Example_MOVE_request_432"></a>Example: MOVE request</h4>
+<h4><a id="Example_MOVE_request_431"></a>Example: MOVE request</h4>
 <pre><code>b'\x03\x00\x00\x00(\x00\x00\x00{&quot;line_idx&quot;:193,&quot;speed&quot;:1,&quot;train_idx&quot;:1}'
 
 |action|msg length|msg                                     |
 |------|----------|----------------------------------------|
 |3     |40        |{&quot;line_idx&quot;:193,&quot;speed&quot;:1,&quot;train_idx&quot;:1}|
 </code></pre>
-<h3><a id="UPGRADE_action_440"></a>UPGRADE action</h3>
+<h3><a id="UPGRADE_action_439"></a>UPGRADE action</h3>
 <p>This action upgrades trains and posts to the next level.</p>
 <p>The server expects to receive following required values:</p>
 <ul>
 <li><strong>posts</strong> - list with indexes of posts to upgrade</li>
 <li><strong>trains</strong> - list with indexes of trains to upgrade</li>
 </ul>
-<h4><a id="Example_UPGRADE_request_449"></a>Example: UPGRADE request</h4>
+<h4><a id="Example_UPGRADE_request_448"></a>Example: UPGRADE request</h4>
 <pre><code>b'\x04\x00\x00\x00\x19\x00\x00\x00{&quot;posts&quot;:[],&quot;trains&quot;:[1]}'
 
 |action|msg length|msg                      |
 |------|----------|-------------------------|
 |4     |25        |{&quot;posts&quot;:[],&quot;trains&quot;:[1]}|
 </code></pre>
-<h3><a id="TURN_action_457"></a>TURN action</h3>
+<h3><a id="TURN_action_456"></a>TURN action</h3>
 <p>This action is needed to force next turn of the game, it allows you to not wait for game’s time slice and play faster.<br>
 The game time slice equals to 10 seconds.</p>
 <p>The action does not require any data.</p>
-<h4><a id="Example_TURN_request_464"></a>Example: TURN request</h4>
+<h4><a id="Example_TURN_request_463"></a>Example: TURN request</h4>
 <pre><code>b'\x05\x00\x00\x00\x00\x00\x00\x00'
 
 |action|msg length|msg|
 |------|----------|---|
 |5     |0         |   |
 </code></pre>
-<h2><a id="About_the_Game_472"></a>About the Game</h2>
-<h3><a id="Two_types_of_goods_474"></a>Two types of goods</h3>
+<h3><a id="GAMES_action_471"></a>GAMES action</h3>
+<p>This action reads information about existing games which are not finished yet.<br>
+A game can has following states:</p>
+<pre><code class="language-C++"><span class="hljs-keyword">enum</span> GameState
+{
+    INIT = <span class="hljs-number">1</span>,
+    RUN = <span class="hljs-number">2</span>,
+    FINISHED = <span class="hljs-number">3</span>
+}
+</code></pre>
+<p>The GAMES action does not require any data.</p>
+<h4><a id="Example_GAMES_request_487"></a>Example: GAMES request</h4>
+<pre><code>b'\x07\x00\x00\x00\x00\x00\x00\x00'
+
+|action|msg length|msg|
+|------|----------|---|
+|7     |0         |   |
+</code></pre>
+<h4><a id="Example_GAMES_response_message_495"></a>Example: GAMES response message</h4>
+<pre><code class="language-JSON">{
+    "<span class="hljs-attribute">games</span>": <span class="hljs-value">[
+        {
+            "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"Try to win me!"</span></span>,
+            "<span class="hljs-attribute">num_players</span>": <span class="hljs-value"><span class="hljs-number">4</span></span>,
+            "<span class="hljs-attribute">num_turns</span>": <span class="hljs-value"><span class="hljs-number">1000</span></span>,
+            "<span class="hljs-attribute">state</span>": <span class="hljs-value"><span class="hljs-number">2</span>
+        </span>}
+    ]
+</span>}
+</code></pre>
+<h2><a id="About_the_Game_510"></a>About the Game</h2>
+<h3><a id="Two_types_of_goods_512"></a>Two types of goods</h3>
 <p>There are two types of resources (goods) in the game: product and armor.</p>
-<h3><a id="Three_types_of_posts_478"></a>Three types of posts</h3>
+<h3><a id="Three_types_of_posts_516"></a>Three types of posts</h3>
 <p>Posts are points of interest on the game map. There are three types of posts: TOWN, MARKET, STORAGE.</p>
 <pre><code class="language-C++"><span class="hljs-keyword">enum</span> PostType
 {
@@ -427,16 +456,16 @@ The game time slice equals to 10 seconds.</p>
     STORAGE = <span class="hljs-number">3</span>
 }
 </code></pre>
-<h3><a id="Product_491"></a>Product</h3>
+<h3><a id="Product_529"></a>Product</h3>
 <p>This type of resource (goods) is used to support the city’s population. During a game turn 1 settler eats 1 product in the town.<br>
 Product can be mined by a train in a market (on the map this object is defined as post with type of MARKET).<br>
 Products sometimes can be stolen by parasites (see: “Parasites Invasion”).</p>
-<h3><a id="Armor_497"></a>Armor</h3>
+<h3><a id="Armor_535"></a>Armor</h3>
 <p>This type of resource (goods) is used to increase the town’s defence from bandits attack (see: “Bandits Attack”).<br>
 Also armor can be used to upgrade units (see: “Upgrade”). Bandits attack decreases armor in the town (1 bandit -&gt; -1 armor).<br>
 Armor can be mined by a train in a storage (on the map this object is defined as post with type STORAGE).<br>
 If you have enough armor in the town - you can use it to upgrade the town itself or/and upgrade your train(s).</p>
-<h3><a id="Events_504"></a>Events</h3>
+<h3><a id="Events_542"></a>Events</h3>
 <p>Sometimes something can happens in the game :). Player will be notified about it with the using of events.<br>
 Each event is bound to some game entity (town, train, etc.).<br>
 There are following event types in the game:</p>
@@ -451,12 +480,12 @@ There are following event types in the game:</p>
     GAME_OVER = <span class="hljs-number">100</span>
 }
 </code></pre>
-<h3><a id="Parasites_Invasion_523"></a>Parasites Invasion</h3>
+<h3><a id="Parasites_Invasion_561"></a>Parasites Invasion</h3>
 <p>This event is bound to the town.<br>
 Parasites eat products in the town. Products decrement is equal to parasites count in the event.<br>
 Number of parasites in one attack: [1…3].<br>
 Safe time (turns count) after attack: 5 * (parasites number in the last attack).</p>
-<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Parasites_Invasion_530"></a>Example: MAP response message (for layer 1) with event “Parasites Invasion”</h4>
+<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Parasites_Invasion_568"></a>Example: MAP response message (for layer 1) with event “Parasites Invasion”</h4>
 <pre><code class="language-JSON">{
     "idx": 1,
     "posts": [
@@ -484,13 +513,13 @@ Safe time (turns count) after attack: 5 * (parasites number in the last attack).
 <li><strong>tick</strong> - game’s turn number</li>
 <li><strong>type</strong> - event’s type</li>
 </ul>
-<h3><a id="Bandits_Attack_560"></a>Bandits Attack</h3>
+<h3><a id="Bandits_Attack_598"></a>Bandits Attack</h3>
 <p>This event is bound to the town.<br>
 Bandits destroy armor in the town. Armor decrement is equal to bandits count in the event.<br>
 If amount of armor in the town is less then bandits count, than population of this town will be decreased!<br>
 Number of bandits in one attack: [1…3].<br>
 Safe time (turns count) after attack: 5 * (bandits number in the last attack).</p>
-<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Bandits_Attack_568"></a>Example: MAP response message (for layer 1) with event “Bandits Attack”</h4>
+<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Bandits_Attack_606"></a>Example: MAP response message (for layer 1) with event “Bandits Attack”</h4>
 <pre><code class="language-JSON">{
     "idx": 1,
     "posts": [
@@ -518,12 +547,12 @@ Safe time (turns count) after attack: 5 * (bandits number in the last attack).</
 <li><strong>tick</strong> - game’s turn number</li>
 <li><strong>type</strong> - event’s type</li>
 </ul>
-<h3><a id="Arrival_of_Refugees_598"></a>Arrival of Refugees</h3>
+<h3><a id="Arrival_of_Refugees_636"></a>Arrival of Refugees</h3>
 <p>This event is bound to the town.<br>
 Refugees increase population of the town. Population increment is equal to refugees count in the event.<br>
 Number of refugees in one event: [1…3].<br>
 Safe time (turns count) after event: 5 * (refugees number in the last event).</p>
-<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Arrival_of_Refugees_605"></a>Example: MAP response message (for layer 1) with event “Arrival of Refugees”</h4>
+<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Arrival_of_Refugees_643"></a>Example: MAP response message (for layer 1) with event “Arrival of Refugees”</h4>
 <pre><code class="language-JSON">{
     "idx": 1,
     "posts": [
@@ -551,13 +580,13 @@ Safe time (turns count) after event: 5 * (refugees number in the last event).</p
 <li><strong>tick</strong> - game’s turn number</li>
 <li><strong>type</strong> - event’s type</li>
 </ul>
-<h3><a id="Train_Crash_635"></a>Train Crash</h3>
+<h3><a id="Train_Crash_673"></a>Train Crash</h3>
 <p>This event is bound to the train.<br>
 If two or more trains are on the same position/point and at the same time - this is the crash situation!<br>
 Crash can’t happen in towns.<br>
 All trains which participated in a crash will be returned to it’s town and all goods in trains will be thrown away.<br>
 Train can’t be used after crash for some period of time (cooldown), this time (turns count) depends on town’s level.</p>
-<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Train_Crash_643"></a>Example: MAP response message (for layer 1) with event “Train Crash”</h4>
+<h4><a id="Example_MAP_response_message_for_layer_1_with_event_Train_Crash_681"></a>Example: MAP response message (for layer 1) with event “Train Crash”</h4>
 <pre><code class="language-JSON">{
     "idx": 1,
     "trains": [
@@ -588,10 +617,10 @@ Train can’t be used after crash for some period of time (cooldown), this time 
 <li><strong>tick</strong> - game’s turn number</li>
 <li><strong>type</strong> - event’s type</li>
 </ul>
-<h3><a id="Upgrade_676"></a>Upgrade</h3>
+<h3><a id="Upgrade_714"></a>Upgrade</h3>
 <p>Player is able to upgrade his town or train(s). All upgrades are paid by armor.<br>
 To initiate upgrade client sends to server an UPGRADE action (this action is described above).</p>
-<h3><a id="Town_upgrade_681"></a>Town upgrade</h3>
+<h3><a id="Town_upgrade_719"></a>Town upgrade</h3>
 <p>What does the town get as a result of upgrade? See in following table:</p>
 <table class="table table-striped table-bordered">
 <thead>
@@ -632,7 +661,7 @@ To initiate upgrade client sends to server an UPGRADE action (this action is des
 </tbody>
 </table>
 <p>Level 3 - is maximal town level.</p>
-<h3><a id="Train_upgrade_693"></a>Train upgrade</h3>
+<h3><a id="Train_upgrade_731"></a>Train upgrade</h3>
 <p>What does the train get as a result of upgrade? See in following table:</p>
 <table class="table table-striped table-bordered">
 <thead>
@@ -669,7 +698,7 @@ To initiate upgrade client sends to server an UPGRADE action (this action is des
 </tbody>
 </table>
 <p>Level 3 - is maximal train level.</p>
-<h3><a id="Rating_705"></a>Rating</h3>
+<h3><a id="Rating_743"></a>Rating</h3>
 <p>The server recalculates rating value (game score) on every turn for each player.<br>
 The rating can be found on MAP layer 1.</p>
 <p>Calculation formula:</p>

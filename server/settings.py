@@ -39,6 +39,8 @@ class BaseConfig(object):
     MAPS_FORMAT = 'yaml'
     MAPS_DISCOVERY = path.join(SRC_DIR, 'maps/*.yaml')
 
+    DEFAULT_NUM_PLAYERS = 1
+    DEFAULT_NUM_TURNS = -1
     TRAINS_COUNT = 8
     FUEL_ENABLED = False
     TRAIN_ALWAYS_DEVASTATED = True

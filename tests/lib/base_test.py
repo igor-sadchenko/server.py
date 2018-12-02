@@ -2,10 +2,14 @@
 """
 
 import json
+import time
 import unittest
 from datetime import datetime
 
 from server.config import CONFIG
+from server.db import map_db
+from server.db.models import Game
+from server.db.session import session_ctx
 from server.defs import Action, Result
 from tests.lib.server_connection import ServerConnection
 
@@ -20,8 +24,37 @@ class BaseTest(unittest.TestCase):
         self.current_tick = 0
         self._connection = None
 
+    @classmethod
+    def setUpClass(cls):
+        cls.clear_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.wait_for_finished_games()
+        cls.clear_db()
+
     def tearDown(self):
         self.reset_connection()
+
+    @staticmethod
+    def clear_db():
+        map_db.reset_db()
+
+    @staticmethod
+    def wait_for_finished_games(retries=10, period=1):
+        with session_ctx() as db:
+            for _ in range(retries):
+                game = db.query(
+                    Game
+                ).filter(
+                    Game.data.is_(None)
+                ).first()
+                if game:
+                    time.sleep(period)
+                else:
+                    return True
+            else:
+                return False
 
     @property
     def connection(self):
@@ -45,7 +78,10 @@ class BaseTest(unittest.TestCase):
             self.assertEqual(exp_result, result)
         return result, message
 
-    def login(self, name=None, game=None, password=None, num_players=None, exp_result=Result.OKEY, **kwargs):
+    def login(
+            self, name=None, game=None, password=None, num_players=None, num_turns=None,
+            exp_result=Result.OKEY, **kwargs
+    ):
         message = {'name': self.player_name if name is None else name}
         if game is not None:
             message['game'] = game
@@ -53,6 +89,8 @@ class BaseTest(unittest.TestCase):
             message['password'] = password
         if num_players is not None:
             message['num_players'] = num_players
+        if num_turns is not None:
+            message['num_turns'] = num_turns
         _, message = self.do_action(
             Action.LOGIN,
             message,
@@ -254,3 +292,11 @@ class BaseTest(unittest.TestCase):
         result, message = conn.read_response()
         self.assertEqual(exp_result, result)
         return json.loads(message) if message else None
+
+    def get_games(self, exp_result=Result.OKEY, **kwargs):
+        _, message = self.do_action(
+            Action.GAMES,
+            exp_result=exp_result,
+            **kwargs
+        )
+        return json.loads(message)

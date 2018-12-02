@@ -3,6 +3,7 @@
 
 from sqlalchemy import func, and_
 
+from config import CONFIG
 from db.models import Base, Game, Action, Player
 from db.session import session_wrapper
 from defs import Action as ActionCodes
@@ -25,10 +26,13 @@ def truncate_tables(session=None):
 
 
 @session_wrapper
-def add_game(name, map_idx, num_players=1, session=None):
+def add_game(
+        name, map_idx, session=None,
+        num_players=CONFIG.DEFAULT_NUM_PLAYERS, num_turns=CONFIG.DEFAULT_NUM_TURNS
+):
     """ Creates a new Game in DB.
     """
-    new_game = Game(name=name, map_id=map_idx, num_players=num_players)
+    new_game = Game(name=name, map_id=map_idx, num_players=num_players, num_turns=num_turns)
     session.add(new_game)
     session.commit()  # Commit to get game's id.
     return new_game.id
@@ -55,30 +59,77 @@ def add_player(idx, name, password=None, session=None):
 def get_player_by_name(name, session=None):
     """ Retrieves a Player from DB.
     """
-    return session.query(Player).filter(Player.name == name).first()
+    return session.query(
+        Player
+    ).filter(
+        Player.name == name
+    ).one_or_none()
 
 
 @session_wrapper
 def get_all_games(session=None):
     """ Retrieves all games with their length.
     """
-    return session.query(Game, func.count(Action.id)).outerjoin(
-        Action, and_(Game.id == Action.game_id, Action.code == ActionCodes.TURN.value)).group_by(
-            Game.id).order_by(Game.id).all()
+    return session.query(
+        Game,
+        func.count(Action.id),
+    ).outerjoin(
+        Action,
+        and_(
+            Game.id == Action.game_id,
+            Action.code == ActionCodes.TURN.value,
+        )
+    ).group_by(
+        Game.id
+    ).order_by(
+        Game.id
+    ).all()
 
 
 @session_wrapper
 def get_game(game_idx, session=None):
     """ Retrieves specified game with it's length.
     """
-    return session.query(Game, func.count(Action.id)).filter(Game.id == game_idx).outerjoin(
-        Action, and_(Game.id == Action.game_id, Action.code == ActionCodes.TURN.value)).group_by(
-            Game.id).first()
+    return session.query(
+        Game,
+        func.count(Action.id),
+    ).filter(
+        Game.id == game_idx
+    ).outerjoin(
+        Action,
+        and_(
+            Game.id == Action.game_id,
+            Action.code == ActionCodes.TURN.value,
+        )
+    ).group_by(
+        Game.id
+    ).one_or_none()
 
 
 @session_wrapper
 def get_all_actions(game_idx, session=None):
     """ Retrieves all actions for the game.
     """
-    return session.query(Action).filter(
-        Action.game_id == game_idx).order_by(Action.created_at, Action.id).all()
+    return session.query(
+        Action
+    ).filter(
+        Action.game_id == game_idx
+    ).order_by(
+        Action.created_at,
+        Action.id,
+    ).all()
+
+
+@session_wrapper
+def update_game_data(game_idx, data, session=None):
+    """ Creates a new Game in DB.
+    """
+    game = session.query(
+        Game
+    ).with_for_update(
+        of=Game, key_share=True
+    ).get(game_idx)
+    if game.data:
+        game.data.update(data)
+    else:
+        game.data = data
