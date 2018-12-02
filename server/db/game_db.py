@@ -3,6 +3,7 @@
 
 from sqlalchemy import func, and_
 
+from config import CONFIG
 from db.models import Base, Game, Action, Player
 from db.session import session_wrapper
 from defs import Action as ActionCodes
@@ -25,10 +26,13 @@ def truncate_tables(session=None):
 
 
 @session_wrapper
-def add_game(name, map_idx, num_players=1, session=None):
+def add_game(
+        name, map_idx, session=None,
+        num_players=CONFIG.DEFAULT_NUM_PLAYERS, num_turns=CONFIG.DEFAULT_NUM_TURNS
+):
     """ Creates a new Game in DB.
     """
-    new_game = Game(name=name, map_id=map_idx, num_players=num_players)
+    new_game = Game(name=name, map_id=map_idx, num_players=num_players, num_turns=num_turns)
     session.add(new_game)
     session.commit()  # Commit to get game's id.
     return new_game.id

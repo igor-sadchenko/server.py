@@ -1,6 +1,7 @@
 """ Game server.
 """
 import json
+import socket
 from functools import wraps
 from socketserver import ThreadingTCPServer, BaseRequestHandler
 
@@ -28,6 +29,9 @@ def login_required(func):
 
 
 class GameServerRequestHandler(BaseRequestHandler):
+
+    HANDLERS = {}
+
     def __init__(self, *args, **kwargs):
         self.action = None
         self.message_len = None
@@ -41,8 +45,9 @@ class GameServerRequestHandler(BaseRequestHandler):
         super(GameServerRequestHandler, self).__init__(*args, **kwargs)
 
     def setup(self):
-        log.info('New connection from {}'.format(self.client_address))
+        log.info('New connection from {}'.format(self.client_address), game=self.game)
         self.closed = False
+        self.HANDLERS[id(self)] = self
 
     def handle(self):
         while not self.closed:
@@ -52,12 +57,18 @@ class GameServerRequestHandler(BaseRequestHandler):
             else:
                 self.closed = True
 
+    @staticmethod
+    def shutdown_all_sockets():
+        for handler in GameServerRequestHandler.HANDLERS.values():
+            handler.request.shutdown(socket.SHUT_RDWR)
+
     def finish(self):
-        log.warn('Connection from {} lost'.format(self.client_address))
+        log.warn('Connection from {} lost'.format(self.client_address), game=self.game)
         if self.game is not None and self.player is not None and self.player.in_game:
             self.game.remove_player(self.player)
             if not self.observer:
                 game_db.add_action(self.game_idx, Action.LOGOUT, player_idx=self.player.idx)
+        self.HANDLERS.pop(id(self))
 
     def data_received(self, data):
         if self.data:
@@ -65,9 +76,9 @@ class GameServerRequestHandler(BaseRequestHandler):
             self.data = None
 
         if self.parse_data(data):
-            log.info('Player: {}, action: {!r}, message:\n{}'.format(
+            log.info('[REQUEST] Player: {}, action: {!r}, message:\n{}'.format(
                 self.player.idx if self.player is not None else self.client_address,
-                Action(self.action), self.message))
+                Action(self.action), self.message), game=self.game)
 
             try:
                 data = json.loads(self.message)
@@ -97,7 +108,7 @@ class GameServerRequestHandler(BaseRequestHandler):
             except errors.ResourceNotFound as err:
                 self.error_response(Result.RESOURCE_NOT_FOUND, err)
             except Exception:
-                log.exception('Got unhandled exception on client command execution')
+                log.exception('Got unhandled exception on client command execution', game=self.game)
                 self.error_response(Result.INTERNAL_SERVER_ERROR)
             finally:
                 self.action = None
@@ -136,9 +147,9 @@ class GameServerRequestHandler(BaseRequestHandler):
 
     def write_response(self, result, message=None):
         resp_message = '' if message is None else message
-        log.debug('Player: {}, result: {!r}, message:\n{}'.format(
+        log.debug('[RESPONSE] Player: {}, result: {!r}, message:\n{}'.format(
             self.player.idx if self.player is not None else self.client_address,
-            result, resp_message))
+            result, resp_message), game=self.game)
         self.request.sendall(result.to_bytes(CONFIG.RESULT_HEADER, byteorder='little'))
         self.request.sendall(len(resp_message).to_bytes(CONFIG.MSGLEN_HEADER, byteorder='little'))
         self.request.sendall(resp_message.encode('utf-8'))
@@ -146,7 +157,7 @@ class GameServerRequestHandler(BaseRequestHandler):
     def error_response(self, result, exception=None):
         if exception is not None:
             str_exception = str(exception)
-            log.error(str_exception)
+            log.error(str_exception, game=self.game)
             error = Serializable()
             error.set_attributes(error=str_exception)
             response_msg = error.to_json_str()
@@ -169,40 +180,33 @@ class GameServerRequestHandler(BaseRequestHandler):
             raise errors.BadCommand('You are already logged in')
 
         self.check_keys(data, ['name'])
-
-        if 'game' in data and self.check_keys(data, ['num_players']):
-            game_name = data['game']
-            num_players = data['num_players']
-        else:
-            game_name = 'Game of {}'.format(data['name'])
-            num_players = 1
-
+        player_name = data['name']
         password = data.get('password', None)
-        player = Player.get(data['name'], password=password)
+
+        player = Player.get(player_name, password=password)
         if not player.check_password(password):
             raise errors.AccessDenied('Password mismatch')
 
-        game = Game.get(game_name, num_players=num_players)
-        if game.num_players != num_players:
-            raise errors.BadCommand(
-                'Incorrect players number requested, game: {}, game players number: {}, '
-                'requested players number: {}'.format(game_name, game.num_players, num_players)
-            )
+        game_name = data.get('game', 'Game of {}'.format(player_name))
+        num_players = data.get('num_players', CONFIG.DEFAULT_NUM_PLAYERS)
+        num_turns = data.get('num_turns', CONFIG.DEFAULT_NUM_TURNS)
 
-        game.check_state({GameState.INIT, GameState.RUN}, 'The game is finished')
+        game = Game.get(game_name, num_players=num_players, num_turns=num_turns)
+
+        game.check_state(GameState.INIT, GameState.RUN)
         player = game.add_player(player)
         self.game = game
         self.game_idx = game.game_idx
         self.player = player
 
-        log.info('Login player: {}'.format(player))
+        log.info('Player successfully logged in: {}'.format(player), game=self.game)
         message = self.player.to_json_str()
 
         return Result.OKEY, message
 
     @login_required
     def on_logout(self, _):
-        log.info('Logout player: {}'.format(self.player.name))
+        log.info('Logout player: {}'.format(self.player.name), game=self.game)
         self.game.remove_player(self.player)
         self.closed = True
         return Result.OKEY, None
@@ -216,21 +220,21 @@ class GameServerRequestHandler(BaseRequestHandler):
     @login_required
     def on_move(self, data: dict):
         self.check_keys(data, ['train_idx', 'speed', 'line_idx'])
-        self.game.check_state({GameState.RUN}, 'The game is not running')
+        self.game.check_state(GameState.RUN)
         with self.player.lock:
             self.game.move_train(self.player, data['train_idx'], data['speed'], data['line_idx'])
         return Result.OKEY, None
 
     @login_required
     def on_turn(self, _):
-        self.game.check_state({GameState.RUN}, 'The game is not running')
+        self.game.check_state(GameState.RUN)
         self.game.turn(self.player)
         return Result.OKEY, None
 
     @login_required
     def on_upgrade(self, data: dict):
         self.check_keys(data, ['trains', 'posts'], agg_func=any)
-        self.game.check_state({GameState.RUN}, 'The game is not running')
+        self.game.check_state(GameState.RUN)
         with self.player.lock:
             self.game.make_upgrade(
                 self.player, posts_idx=data.get('posts', []), trains_idx=data.get('trains', [])
@@ -241,6 +245,13 @@ class GameServerRequestHandler(BaseRequestHandler):
     def on_player(self, _):
         message = self.player.to_json_str()
         return Result.OKEY, message
+
+    def on_list_games(self, _):
+        games = Serializable()
+        games.set_attributes(
+            games=Game.get_all_active_games()
+        )
+        return Result.OKEY, games.to_json_str()
 
     def on_observer(self, _):
         if self.game or self.observer:
@@ -258,6 +269,7 @@ class GameServerRequestHandler(BaseRequestHandler):
         Action.UPGRADE: on_upgrade,
         Action.TURN: on_turn,
         Action.PLAYER: on_player,
+        Action.GAMES: on_list_games,
         Action.OBSERVER: on_observer,
     }
     REPLAY_ACTIONS = {
@@ -282,6 +294,7 @@ def run_server(_, address=CONFIG.SERVER_ADDR, port=CONFIG.SERVER_PORT, log_level
         log.warn('Server stopped by keyboard interrupt, shutting down...')
     finally:
         try:
+            GameServerRequestHandler.shutdown_all_sockets()
             Game.stop_all_games()
             if log.is_queued:
                 log.stop()

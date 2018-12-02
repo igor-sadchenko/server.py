@@ -33,6 +33,7 @@ class Observer(object):
         self.current_action = 0
         self.max_turn = 0
         self.num_players = 0
+        self.num_turns = 0
 
     @staticmethod
     def check_keys(data: dict, keys, agg_func=all):
@@ -71,6 +72,7 @@ class Observer(object):
             self.game_name,
             observed=True,
             num_players=self.num_players,
+            num_turns=self.num_turns,
             map_name=self.map_name
         )
         self.players = {}
@@ -184,6 +186,7 @@ class Observer(object):
         self.game = None
         self.game_name = game.name
         self.num_players = game.num_players
+        self.num_turns = game.num_turns
         self.map_name = game_map.name
         self.actions = game_db.get_all_actions(game_idx)
         self.max_turn = game_length

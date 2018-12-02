@@ -78,7 +78,10 @@ class BaseTest(unittest.TestCase):
             self.assertEqual(exp_result, result)
         return result, message
 
-    def login(self, name=None, game=None, password=None, num_players=None, exp_result=Result.OKEY, **kwargs):
+    def login(
+            self, name=None, game=None, password=None, num_players=None, num_turns=None,
+            exp_result=Result.OKEY, **kwargs
+    ):
         message = {'name': self.player_name if name is None else name}
         if game is not None:
             message['game'] = game
@@ -86,6 +89,8 @@ class BaseTest(unittest.TestCase):
             message['password'] = password
         if num_players is not None:
             message['num_players'] = num_players
+        if num_turns is not None:
+            message['num_turns'] = num_turns
         _, message = self.do_action(
             Action.LOGIN,
             message,
@@ -287,3 +292,11 @@ class BaseTest(unittest.TestCase):
         result, message = conn.read_response()
         self.assertEqual(exp_result, result)
         return json.loads(message) if message else None
+
+    def get_games(self, exp_result=Result.OKEY, **kwargs):
+        _, message = self.do_action(
+            Action.GAMES,
+            exp_result=exp_result,
+            **kwargs
+        )
+        return json.loads(message)
