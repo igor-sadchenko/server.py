@@ -16,7 +16,7 @@ __all__ = ['activate_map', 'generate_map', 'generate_all_maps', 'db_init', 'gene
 def generate_map(_, map_name=CONFIG.MAP_NAME):
     """ Generates a map in the DB.
     """
-    map_db.generate_maps(map_names=[map_name, ], active_map=map_name)
+    map_db.generate_maps(map_names=[map_name, ])
 
 
 @task
