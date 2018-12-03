@@ -95,7 +95,7 @@ class Game(Base):
     updated_at = Column(
         DateTime, default=datetime.utcnow, server_default=func.now(), onupdate=datetime.utcnow
     )
-    map_id = Column(Integer, ForeignKey('maps.id', ondelete='SET NULL'), index=True, nullable=False)
+    map_id = Column(Integer, ForeignKey('maps.id', ondelete='SET NULL'), index=True)
     num_players = Column(Integer, nullable=False)
     num_turns = Column(Integer, nullable=False)
     data = Column(MutableDict.as_mutable(JSON))
