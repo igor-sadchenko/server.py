@@ -675,8 +675,8 @@ class Game(Thread):
                     # Calculating distance between train_1 and train_2 now and after next tick:
                     train_step_1 = self.get_sign(train_1.speed)
                     train_step_2 = self.get_sign(train_2.speed)
-                    dist_before_tick = math.fabs(train_1.position - train_2.position)
-                    dist_after_tick = math.fabs(train_1.position + train_step_1 - train_2.position + train_step_2)
+                    dist_after_tick = math.fabs(train_1.position - train_2.position)
+                    dist_before_tick = math.fabs((train_1.position - train_step_1) - (train_2.position - train_step_2))
                     # If after next tick train_1 and train_2 cross:
                     if dist_before_tick == dist_after_tick == 1 and train_step_1 + train_step_2 == 0:
                         collision_pairs.append((train_1, train_2))

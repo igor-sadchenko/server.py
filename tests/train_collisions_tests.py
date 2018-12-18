@@ -350,3 +350,49 @@ class TestTrainCollisions(BaseTest):
             self.assertEqual(map_data['trains'][1]['cooldown'], 0)
             self.move_train(test_line_idx, train_1['idx'], 1, exp_result=Result.OKEY)
             self.move_train(test_line_idx, train_2['idx'], 1, exp_result=Result.OKEY)
+
+    def test_no_collision_on_move_towards_1_turn_before_and_after(self):
+        test_line_idx = 18
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
+        self.move_train_until_stop(test_line_idx, train_1['idx'], -1)
+        self.move_train(test_line_idx, train_1['idx'], 1)
+        self.move_train(test_line_idx, train_2['idx'], -1)
+
+        self.turn()
+        map_data = self.get_map(1)
+        self.assertFalse(
+            self.check_collision_event(
+                map_data['trains'][0]['events'],
+                Event(EventType.TRAIN_COLLISION, self.current_tick, train=train_2['idx'])
+            )
+        )
+        self.assertFalse(
+            self.check_collision_event(
+                map_data['trains'][1]['events'],
+                Event(EventType.TRAIN_COLLISION, self.current_tick, train=train_1['idx'])
+            )
+        )
+        self.assertEqual(map_data['trains'][0]['line_idx'], test_line_idx)
+        self.assertEqual(map_data['trains'][0]['position'], 1)
+        self.assertEqual(map_data['trains'][1]['line_idx'], test_line_idx)
+        self.assertEqual(map_data['trains'][1]['position'], 2)
+
+        self.turn()
+        map_data = self.get_map(1)
+        self.assertTrue(
+            self.check_collision_event(
+                map_data['trains'][0]['events'],
+                Event(EventType.TRAIN_COLLISION, self.current_tick, train=train_2['idx'])
+            )
+        )
+        self.assertTrue(
+            self.check_collision_event(
+                map_data['trains'][1]['events'],
+                Event(EventType.TRAIN_COLLISION, self.current_tick, train=train_1['idx'])
+            )
+        )
+        self.assertEqual(map_data['trains'][0]['line_idx'], train_1['line_idx'])
+        self.assertEqual(map_data['trains'][0]['position'], train_1['position'])
+        self.assertEqual(map_data['trains'][1]['line_idx'], train_2['line_idx'])
+        self.assertEqual(map_data['trains'][1]['position'], train_2['position'])
