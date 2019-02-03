@@ -1,93 +1,28 @@
-import json
-import unittest
-from datetime import datetime
+""" Tests for game random events.
+"""
 
-from server.db.map import generate_map02, DbMap
-from server.db.session import map_session_ctx
-from server.defs import Action, Result
+from server.config import CONFIG
+from server.db import map_db
 from server.entity.event import Event, EventType
-from server.game_config import CONFIG
-from test.server_connection import ServerConnection
+from tests.lib.base_test import BaseTest
 
 
-class TestGameEvents(unittest.TestCase):
-    """ Test class for a Game Player.
-    """
-    PLAYER_NAME = 'Test Player Name ' + datetime.now().strftime('%H:%M:%S.%f')
+class TestGameEvents(BaseTest):
+
+    MAP_NAME = 'test01'
 
     @classmethod
     def setUpClass(cls):
-        database = DbMap()
-        database.reset_db()
-        with map_session_ctx() as session:
-            generate_map02(database, session)
-
-    @classmethod
-    def tearDownClass(cls):
-        database = DbMap()
-        database.reset_db()
-
-    def do_action(self, action, data):
-        return self.connection.send_action(action, data)
+        super().setUpClass()
+        map_db.generate_maps(map_names=[cls.MAP_NAME, ], active_map=cls.MAP_NAME)
 
     def setUp(self):
-        self.connection = ServerConnection()
+        super().setUp()
         self.player = self.login()
-        self.current_tick = 0
 
     def tearDown(self):
         self.logout()
-        self.connection.close()
-
-    def login(self):
-        result, message = self.do_action(Action.LOGIN, {'name': self.PLAYER_NAME})
-        self.assertEqual(Result.OKEY, result)
-        return json.loads(message)
-
-    def logout(self):
-        result, _ = self.do_action(Action.LOGOUT, None)
-        self.assertEqual(Result.OKEY, result)
-
-    def turn(self, turns_count=1):
-        for _ in range(turns_count):
-            self.current_tick += 1
-            result, _ = self.do_action(Action.TURN, {})
-            self.assertEqual(Result.OKEY, result)
-
-    def get_post(self, post_id):
-        data = self.get_map(1)
-        posts = {x['idx']: x for x in data['post']}
-        self.assertIn(post_id, posts)
-        return posts[post_id]
-
-    def get_map(self, layer):
-        result, message = self.do_action(Action.MAP, {'layer': layer})
-        self.assertEqual(Result.OKEY, result)
-        return json.loads(message)
-
-    def check_refugees_arrival_event(self, events, ok_event):
-        for event in events:
-            if (event['type'] == ok_event.type
-                    and event['refugees_number'] == ok_event.refugees_number
-                    and event['tick'] == ok_event.tick):
-                return True
-        return False
-
-    def check_hijackers_assault_event(self, events, ok_event):
-        for event in events:
-            if (event['type'] == ok_event.type
-                    and event['hijackers_power'] == ok_event.hijackers_power
-                    and event['tick'] == ok_event.tick):
-                return True
-        return False
-
-    def check_parasites_assault_event(self, events, ok_event):
-        for event in events:
-            if (event['type'] == ok_event.type
-                    and event['parasites_power'] == ok_event.parasites_power
-                    and event['tick'] == ok_event.tick):
-                return True
-        return False
+        super().tearDown()
 
     def test_refugees_arrival(self):
         turns_num = 6
@@ -102,7 +37,7 @@ class TestGameEvents(unittest.TestCase):
             self.turn()
             town = self.get_post(town_idx)
             check_event_result = self.check_refugees_arrival_event(
-                town['event'],
+                town['events'],
                 Event(EventType.REFUGEES_ARRIVAL, self.current_tick, refugees_number=refugees_number)
             )
             if self.current_tick in turns_with_refugees:
@@ -128,7 +63,7 @@ class TestGameEvents(unittest.TestCase):
             self.turn()
             town = self.get_post(town_idx)
             check_event_result = self.check_hijackers_assault_event(
-                town['event'],
+                town['events'],
                 Event(EventType.HIJACKERS_ASSAULT, self.current_tick, hijackers_power=hijackers_power)
             )
             if self.current_tick in turns_with_assault:
@@ -169,7 +104,7 @@ class TestGameEvents(unittest.TestCase):
             self.turn()
             town = self.get_post(town_idx)
             check_event_result = self.check_parasites_assault_event(
-                town['event'],
+                town['events'],
                 Event(EventType.PARASITES_ASSAULT, self.current_tick, parasites_power=parasites_power)
             )
             if self.current_tick in turns_with_assault:
@@ -179,3 +114,45 @@ class TestGameEvents(unittest.TestCase):
             else:
                 self.assertFalse(check_event_result)
                 self.assertEqual(town['product'], max(product_before_turn - population_before_turn, 0))
+
+    def test_event_messages_count(self):
+        town_idx = self.player['town']['idx']
+        self.turn()
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 3)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 0)
+
+        self.turn(turns_count=10)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), CONFIG.MAX_EVENT_MESSAGES)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 0)
+
+        self.turn(turns_count=20)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), CONFIG.MAX_EVENT_MESSAGES)
+        town = self.get_post(town_idx)
+        self.assertEqual(len(town['events']), 0)
+
+        test_line_idx = 13
+        train_1 = self.player['trains'][0]
+        train_2 = self.player['trains'][1]
+
+        for _ in range(3):
+            self.move_train(test_line_idx, train_1['idx'], 1)
+            self.move_train(test_line_idx, train_2['idx'], 1)
+            self.turn(turns_count=3)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), 3)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), 0)
+
+        for _ in range(6):
+            self.move_train(test_line_idx, train_1['idx'], 1)
+            self.move_train(test_line_idx, train_2['idx'], 1)
+            self.turn(turns_count=3)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), CONFIG.MAX_EVENT_MESSAGES)
+        train_1 = self.get_train(train_1['idx'])
+        self.assertEqual(len(train_1['events']), 0)

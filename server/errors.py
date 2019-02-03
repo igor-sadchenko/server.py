@@ -12,7 +12,7 @@ class BadCommand(WgForgeServerError):
     pass
 
 
-class NotReady(WgForgeServerError):
+class InappropriateGameState(WgForgeServerError):
     pass
 
 
